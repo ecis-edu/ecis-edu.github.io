@@ -50,7 +50,7 @@ document.addEventListener('keydown', event => {
 });
 
 window.addEventListener('resize', () => {
-  if (window.innerWidth > 860 && nav?.classList.contains('is-open')) {
+  if (window.innerWidth > 850 && nav?.classList.contains('is-open')) {
     nav.classList.remove('is-open');
     document.body.classList.remove('nav-open');
     menuToggle?.setAttribute('aria-expanded', 'false');
@@ -90,23 +90,14 @@ contactForm?.addEventListener('submit', async event => {
     const formData = new FormData(contactForm);
     const payload = Object.fromEntries(formData.entries());
 
-    const controller = new AbortController();
-    const requestTimeout = window.setTimeout(() => controller.abort(), 20000);
-
-    let response;
-    try {
-      response = await fetch(contactForm.dataset.formsubmitAjax, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      });
-    } finally {
-      window.clearTimeout(requestTimeout);
-    }
+    const response = await fetch(contactForm.dataset.formsubmitAjax, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
 
     let data = {};
     try { data = await response.json(); } catch (_) {}
@@ -212,9 +203,17 @@ function loadExperiencesJsonp() {
       script.remove();
     };
 
+    const timeout = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('Tiempo de espera agotado.'));
+    }, 12000);
+
     window[callbackName] = data => {
       if (settled) return;
       settled = true;
+      window.clearTimeout(timeout);
       cleanup();
 
       if (!data || data.resultado !== 'ok' || !Array.isArray(data.experiencias)) {
@@ -227,6 +226,7 @@ function loadExperiencesJsonp() {
     script.onerror = () => {
       if (settled) return;
       settled = true;
+      window.clearTimeout(timeout);
       cleanup();
       reject(new Error('No se pudieron cargar las experiencias.'));
     };
@@ -338,8 +338,6 @@ if (enrollmentForm) {
 
     writeJsonStorage(ECIS_STORAGE_KEY, data);
     removeStorage(ECIS_RESULT_KEY);
-    removeStorage(ECIS_MP_ORDER_KEY);
-    removeStorage(ECIS_MP_ATTEMPT_KEY);
     window.location.href = 'pago.html';
   });
 }
@@ -363,7 +361,6 @@ const whatsappProof = document.querySelector('#send-whatsapp-proof');
 const emailProof = document.querySelector('#send-email-proof');
 const postForm = document.querySelector('#ecis-registration-post');
 const postPayload = document.querySelector('#ecis-registration-payload');
-const registrationFrame = document.querySelector('#ecis-registration-frame');
 const paymentMethodInputs = Array.from(document.querySelectorAll('input[name="paymentMethod"]'));
 
 const mpCheckout = document.querySelector('#mp-checkout');
@@ -384,7 +381,7 @@ const mpRetryPayment = document.querySelector('#mp-retry-payment');
 let paymentDraft = null;
 let reservedRegistrationCode = '';
 let registrationCodePromise = null;
-let iframeResponseWaiter = null;
+let checkoutProWaiter = null;
 
 function renderPaymentSummary(data) {
   if (!paymentSummary) return;
@@ -446,7 +443,6 @@ function showFinishedState(code, data) {
   paymentFlow.hidden = true;
   if (mpResultPanel) mpResultPanel.hidden = true;
   finishedPanel.hidden = false;
-  finishedPanel.focus({ preventScroll: true });
   finishedPanel.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 }
 
@@ -500,11 +496,9 @@ function showMpResultState({ code, status = 'verificando', message = '', detail 
 
   if (mpRetryPayment) mpRetryPayment.hidden = normalized !== 'rechazado';
 
-  const wasHidden = mpResultPanel.hidden;
   paymentFlow.hidden = true;
   if (finishedPanel) finishedPanel.hidden = true;
   mpResultPanel.hidden = false;
-  if (wasHidden) mpResultPanel.focus({ preventScroll: true });
 }
 
 function updatePaymentMethodSelection() {
@@ -578,23 +572,10 @@ async function ensureRegistrationCode() {
   if (reservedRegistrationCode) return reservedRegistrationCode;
 
   const storedOrder = readJsonStorage(ECIS_MP_ORDER_KEY);
-  const storedOrderMatchesDraft = Boolean(
-    storedOrder?.codigo &&
-    /^ECIS-\d{4,}$/.test(storedOrder.codigo) &&
-    paymentDraft?.experienciaId &&
-    storedOrder.experienciaId === paymentDraft.experienciaId &&
-    storedOrder.email === paymentDraft.email
-  );
-
-  if (storedOrderMatchesDraft) {
+  if (storedOrder?.codigo && /^ECIS-\d{4,}$/.test(storedOrder.codigo)) {
     reservedRegistrationCode = storedOrder.codigo;
     if (mpReservedCode) mpReservedCode.textContent = reservedRegistrationCode;
     return reservedRegistrationCode;
-  }
-
-  if (storedOrder?.codigo && !storedOrderMatchesDraft) {
-    removeStorage(ECIS_MP_ORDER_KEY);
-    clearMpAttemptId();
   }
 
   if (!registrationCodePromise) {
@@ -644,104 +625,78 @@ function getReturnBaseUrl() {
   return url.href;
 }
 
-function isTrustedMercadoPagoCheckoutUrl(value) {
-  try {
-    const url = new URL(String(value || ''));
-    if (url.protocol !== 'https:') return false;
-
-    const host = url.hostname.toLowerCase();
-    return host === 'mercadopago.com.ar' ||
-      host.endsWith('.mercadopago.com.ar') ||
-      host === 'mercadopago.com' ||
-      host.endsWith('.mercadopago.com');
-  } catch (_) {
-    return false;
-  }
-}
-
-function submitThroughRegistrationFrame(payload, {
-  expectedSource,
-  timeoutMs = 30000,
-  timeoutMessage = 'La operación está demorando más de lo esperado.'
-} = {}) {
-  if (!registrationFrame || !expectedSource) {
-    return Promise.reject(new Error('No se pudo preparar la comunicación con el sistema de inscripción.'));
-  }
-
-  if (iframeResponseWaiter) {
-    return Promise.reject(new Error('Ya hay una operación en curso. Esperá unos segundos.'));
-  }
-
+function consultarCheckoutIntentoJsonp(intentoId, timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
-    const timer = window.setTimeout(() => {
-      iframeResponseWaiter = null;
-      reject(new Error(timeoutMessage));
+    const callbackName = `ecisMpIntento_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const script = document.createElement('script');
+    let settled = false;
+
+    const cleanup = () => {
+      try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+      script.remove();
+    };
+
+    const timeout = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('La consulta del checkout está demorando más de lo esperado.'));
     }, timeoutMs);
 
-    iframeResponseWaiter = { resolve, reject, timer, expectedSource };
+    window[callbackName] = data => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      cleanup();
+      resolve(data || null);
+    };
 
-    try {
-      submitRegistrationThroughIframe(payload);
-    } catch (error) {
-      window.clearTimeout(timer);
-      iframeResponseWaiter = null;
-      reject(error);
-    }
+    script.onerror = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      cleanup();
+      reject(new Error('No pudimos consultar la preparación de Mercado Pago.'));
+    };
+
+    const separator = ECIS_ENDPOINT.includes('?') ? '&' : '?';
+    script.src = `${ECIS_ENDPOINT}${separator}accion=consultar_checkout_intento&intentoId=${encodeURIComponent(intentoId)}&callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
+    script.async = true;
+    document.head.appendChild(script);
   });
 }
 
-function submitCheckoutProThroughIframe(payload) {
-  return submitThroughRegistrationFrame(payload, {
-    expectedSource: 'ecis-mercadopago-checkout',
-    timeoutMs: 45000,
-    timeoutMessage: 'Mercado Pago está demorando más de lo esperado. Podés volver a intentar sin riesgo de duplicar el cobro.'
-  }).then(data => {
-    if (data.resultado !== 'redirect' || !data.checkoutUrl) {
-      throw new Error(data.mensaje || 'No pudimos preparar el checkout de Mercado Pago.');
+async function esperarResultadoCheckoutIntento(intentoId, timeoutMs = 30000) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const result = await consultarCheckoutIntentoJsonp(intentoId);
+
+    if (result?.resultado === 'redirect' && result.checkoutUrl) return result;
+    if (result?.resultado === 'error') {
+      throw new Error(result.mensaje || 'No pudimos preparar el checkout de Mercado Pago.');
     }
 
-    if (!isTrustedMercadoPagoCheckoutUrl(data.checkoutUrl)) {
-      throw new Error('Mercado Pago devolvió una dirección de checkout no válida.');
-    }
-
-    return data;
-  });
-}
-
-function submitTransferRegistrationThroughIframe(payload) {
-  return submitThroughRegistrationFrame(payload, {
-    expectedSource: 'ecis-inscripciones',
-    timeoutMs: 30000,
-    timeoutMessage: 'El registro está demorando más de lo esperado. Intentá nuevamente en unos segundos.'
-  }).then(data => {
-    if (data.resultado !== 'ok' || !data.codigo) {
-      throw new Error(data.mensaje || 'No pudimos registrar la inscripción.');
-    }
-    return data;
-  });
-}
-
-window.addEventListener('message', event => {
-  const data = event?.data;
-  if (!data || typeof data !== 'object' || !iframeResponseWaiter) return;
-
-  // Solo aceptamos mensajes provenientes del iframe oculto que usamos para
-  // comunicarnos con Apps Script. Esto evita que otra pestaña o script pueda
-  // simular una respuesta de inscripción o de Mercado Pago.
-  if (registrationFrame?.contentWindow && event.source !== registrationFrame.contentWindow) return;
-  if (data.source !== iframeResponseWaiter.expectedSource) return;
-
-  const waiter = iframeResponseWaiter;
-  iframeResponseWaiter = null;
-  window.clearTimeout(waiter.timer);
-
-  if (data.resultado === 'error') {
-    waiter.reject(new Error(data.mensaje || 'La operación no pudo completarse.'));
-    return;
+    await new Promise(resolve => window.setTimeout(resolve, 700));
   }
 
-  waiter.resolve(data);
-});
+  throw new Error('Mercado Pago está demorando más de lo esperado. Podés volver a intentar sin riesgo de duplicar el cobro.');
+}
+
+async function submitCheckoutProThroughIframe(payload) {
+  if (checkoutProWaiter) {
+    throw new Error('Ya estamos preparando Mercado Pago. Esperá unos segundos.');
+  }
+
+  checkoutProWaiter = true;
+
+  try {
+    submitRegistrationThroughIframe(payload);
+    return await esperarResultadoCheckoutIntento(payload.intentoId);
+  } finally {
+    checkoutProWaiter = null;
+  }
+}
 
 function consultarOrdenMercadoPagoJsonp(codigo, orderId, retorno = '', timeoutMs = 20000) {
   return new Promise((resolve, reject) => {
@@ -922,6 +877,10 @@ function initializePaymentPage() {
     return;
   }
 
+  ensureRegistrationCode().catch(error => {
+    console.warn('ECIS: no se pudo reservar anticipadamente el código.', error);
+    if (mpReservedCode) mpReservedCode.textContent = 'Se generará al continuar';
+  });
 }
 
 paymentMethodInputs.forEach(input => {
@@ -1040,7 +999,7 @@ mpRetryPayment?.addEventListener('click', () => {
   if (transferCheckout) transferCheckout.hidden = true;
   if (mpCheckout) {
     mpCheckout.hidden = false;
-    mpCheckout.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+    mpCheckout.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 });
 
@@ -1090,7 +1049,8 @@ transferDone?.addEventListener('click', async () => {
   transferDone.textContent = 'Generando código…';
 
   try {
-    // Reservamos primero un código ECIS único.
+    // Primero reservamos un código único. De esta forma la web puede mostrarlo
+    // sin depender de una confirmación automática del pago.
     const codigo = await ensureRegistrationCode();
 
     const payload = {
@@ -1104,8 +1064,6 @@ transferDone?.addEventListener('click', async () => {
       medioPago: 'Transferencia'
     };
 
-    // Enviamos el registro a Apps Script sin esperar su respuesta.
-    // Google Sheets puede tardar en responder aunque el registro ya se haya guardado.
     submitRegistrationThroughIframe(payload);
 
     const result = {
@@ -1117,11 +1075,11 @@ transferDone?.addEventListener('click', async () => {
     };
     writeJsonStorage(ECIS_RESULT_KEY, result);
 
-    // Avanzamos de inmediato: la transferencia queda pendiente de verificación manual.
+    // Mostramos inmediatamente las instrucciones para enviar código + comprobante.
+    // El estado del pago queda pendiente y ECIS lo confirma manualmente.
     showFinishedState(codigo, paymentDraft);
   } catch (error) {
     transferDone.disabled = false;
-    transferDone.removeAttribute('aria-busy');
     transferDone.textContent = 'Ya realicé la transferencia →';
     setError(paymentError, error?.message || 'No pudimos generar tu código de inscripción. Intentá nuevamente.');
   }
