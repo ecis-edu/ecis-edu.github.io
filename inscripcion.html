@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="description" content="Inscripción a experiencias ECIS."/>
+<meta name="theme-color" content="#0d0d0d"/>
+<meta name="robots" content="noindex,follow"/>
+<meta name="author" content="ECIS"/>
+<meta property="og:locale" content="es_AR"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="ECIS"/>
+<meta property="og:title" content="ECIS | Inscripción"/>
+<meta property="og:description" content="Completá tus datos para iniciar una inscripción en ECIS."/>
+<link href="assets/images/favicon.svg" rel="icon" type="image/svg+xml"/>
+<title>ECIS | Inscripción</title>
+<link href="styles.css?v=20260924-3" rel="stylesheet"/>
+</head>
+<body>
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
+<header class="site-header">
+<div class="container nav-wrap">
+<a aria-label="ECIS, inicio" class="brand" href="index.html">
+<span class="brand-mark">ECIS</span>
+<span aria-hidden="true" class="brand-divider"></span>
+<span class="brand-name">EDUCACIÓN EN CONTROL DE INFECCIONES<br/>Y SEGURIDAD DEL PACIENTE</span>
+</a>
+<button aria-controls="main-nav" aria-expanded="false" aria-label="Abrir menú" class="menu-toggle" type="button"><span></span><span></span><span></span></button>
+<nav aria-label="Navegación principal" class="main-nav" id="main-nav">
+<a href="index.html">Inicio</a>
+<a href="nosotros.html">Nosotros</a>
+<a href="experiencias.html">Aula ECIS</a>
+<a href="fuentes.html">Fuentes</a>
+<a href="contacto.html">Contacto</a>
+<a class="nav-cta" href="https://ecis-edu.github.io/ecis-verificador/" rel="noopener noreferrer" target="_blank">Verificador</a>
+</nav>
+</div>
+</header>
+
+<main id="contenido" class="checkout-page">
+<section class="checkout-intro">
+<div class="container checkout-intro-inner">
+<div>
+<p class="eyebrow">INSCRIPCIÓN ECIS</p>
+<h1>Completá tus datos</h1>
+<p>Ingresá la información para generar tu inscripción.</p>
+</div>
+<ol class="checkout-progress" aria-label="Progreso de inscripción">
+<li class="is-current"><span>1</span><strong>Datos</strong></li>
+<li><span>2</span><strong>Pago</strong></li>
+</ol>
+</div>
+</section>
+
+<section class="checkout-section">
+<div class="container checkout-narrow">
+<article class="checkout-card">
+<form id="ecis-enrollment-form" class="checkout-form" novalidate>
+<div class="checkout-form-grid">
+<div class="checkout-field">
+<label for="enroll-name">Nombre y apellido <span aria-hidden="true">*</span></label>
+<input id="enroll-name" name="nombre" type="text" autocomplete="name" placeholder="Nombre y apellido" required maxlength="100"/>
+</div>
+<div class="checkout-field">
+<label for="enroll-email">Correo electrónico <span aria-hidden="true">*</span></label>
+<input id="enroll-email" name="email" type="email" autocomplete="email" placeholder="nombre@email.com" required maxlength="140"/>
+</div>
+<div class="checkout-field">
+<label for="enroll-dni">DNI <span aria-hidden="true">*</span></label>
+<input id="enroll-dni" name="dni" type="text" inputmode="numeric" autocomplete="off" placeholder="Ej.: 12345678" required maxlength="15"/>
+</div>
+<div class="checkout-field">
+<label for="enroll-phone">Teléfono <span aria-hidden="true">*</span></label>
+<input id="enroll-phone" name="telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="Ej.: 11 1234 5678" required maxlength="30"/>
+</div>
+<div class="checkout-field checkout-field-full">
+<label for="enroll-institution">Institución / Organización <span class="checkout-optional">Opcional</span></label>
+<input id="enroll-institution" name="institucion" type="text" autocomplete="organization" placeholder="Institución, organización o lugar de trabajo" maxlength="140"/>
+</div>
+<div class="checkout-field checkout-field-full">
+<label for="enroll-experience">Curso / Experiencia seleccionada <span aria-hidden="true">*</span></label>
+<div class="checkout-select-wrap">
+<select id="enroll-experience" name="experienciaId" required disabled>
+<option value="">Cargando experiencias…</option>
+</select>
+</div>
+<p class="checkout-field-help" id="experience-help">La disponibilidad y el importe se toman de las experiencias activas de ECIS.</p>
+<button class="checkout-retry" id="experience-retry" type="button" hidden>Reintentar carga</button>
+</div>
+</div>
+
+<p class="checkout-error" id="enrollment-error" role="alert" hidden></p>
+<button class="button button-primary checkout-primary" type="submit">Continuar al pago →</button>
+
+<div class="checkout-privacy" aria-label="Uso de datos personales">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3m-11 0h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Zm3 5a2 2 0 1 0 4 0 2 2 0 0 0-4 0Z"/></svg>
+<span>Tus datos serán utilizados únicamente para gestionar tu inscripción.</span>
+</div>
+</form>
+</article>
+</div>
+</section>
+</main>
+
+<footer class="site-footer">
+<div class="footer-main"><div class="container footer-grid">
+<div class="brand footer-brand"><span class="brand-mark">ECIS</span><span aria-hidden="true" class="brand-divider"></span><span class="brand-name">EDUCACIÓN EN CONTROL DE INFECCIONES<br/>Y SEGURIDAD DEL PACIENTE</span></div>
+<div class="footer-social"><a aria-label="Instagram" href="https://www.instagram.com/ecis_edu/?hl=es-la" rel="noopener noreferrer" target="_blank"><img alt="" aria-hidden="true" class="social-icon" src="assets/images/iconoinstagram.png"/></a><a aria-label="Correo electrónico" href="mailto:ecis.ar.edu@gmail.com"><img alt="" aria-hidden="true" class="social-icon" src="assets/images/iconomail.png"/></a><a aria-label="WhatsApp" href="https://wa.me/5401136741338?text=Hola%20ECIS%2C%20quisiera%20realizar%20una%20consulta." rel="noopener noreferrer" target="_blank"><img alt="" aria-hidden="true" class="social-icon" src="assets/images/iconowsp.png"/></a></div>
+</div></div>
+<div class="footer-bottom"><div class="container">© <span id="year"></span> ECIS. Todos los derechos reservados.<span>De la evidencia a la práctica.</span></div></div>
+</footer>
+<script src="script.js?v=20260924-3"></script>
+</body>
+</html>
