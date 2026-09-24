@@ -937,15 +937,20 @@ mpRedirectButton?.addEventListener('click', async () => {
   mpRedirectButton.disabled = true;
   mpRedirectButton.setAttribute('aria-busy', 'true');
   const originalText = mpRedirectButton.textContent;
-  mpRedirectButton.textContent = 'Preparando Mercado Pago…';
+  mpRedirectButton.textContent = 'Abriendo Mercado Pago…';
   if (mpWaitMessage) mpWaitMessage.hidden = false;
 
   try {
     const codigo = await ensureRegistrationCode();
     const intentoId = getOrCreateMpAttemptId();
 
+    if (!postForm || !postPayload) {
+      throw new Error('No se pudo preparar la conexión con Mercado Pago.');
+    }
+
     const payload = {
       accion: 'mercadopago_checkout_pro',
+      modo: 'directo',
       codigo,
       intentoId,
       nombre: paymentDraft.nombre,
@@ -957,18 +962,12 @@ mpRedirectButton?.addEventListener('click', async () => {
       returnUrl: getReturnBaseUrl()
     };
 
-    const result = await submitCheckoutProThroughIframe(payload);
-
-    writeJsonStorage(ECIS_MP_ORDER_KEY, {
-      codigo,
-      orderId: result.orderId || '',
-      checkoutUrl: result.checkoutUrl,
-      experienciaId: paymentDraft.experienciaId,
-      email: paymentDraft.email,
-      resultado: 'creado'
-    });
-
-    window.location.assign(result.checkoutUrl);
+    // En el flujo directo el POST navega la pestaña actual hacia Apps Script.
+    // Apps Script crea la Order y redirige inmediatamente al checkout_url de Mercado Pago.
+    postForm.action = ECIS_ENDPOINT;
+    postForm.target = '_self';
+    postPayload.value = JSON.stringify(payload);
+    postForm.submit();
   } catch (error) {
     mpRedirectButton.disabled = false;
     mpRedirectButton.removeAttribute('aria-busy');
