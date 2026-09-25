@@ -494,7 +494,11 @@ function showMpResultState({ code, status = 'verificando', message = '', detail 
   if (mpResultMessage) mpResultMessage.textContent = message || preset.message;
   if (mpResultDetail) mpResultDetail.innerHTML = `<p>${escapeHtml(detail || preset.detail)}</p>`;
 
-  if (mpRetryPayment) mpRetryPayment.hidden = normalized !== 'rechazado';
+  if (mpRetryPayment) {
+    const mostrarReintento = normalized === 'rechazado';
+    mpRetryPayment.hidden = !mostrarReintento;
+    mpRetryPayment.style.display = mostrarReintento ? '' : 'none';
+  }
 
   paymentFlow.hidden = true;
   if (finishedPanel) finishedPanel.hidden = true;
