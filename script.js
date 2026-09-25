@@ -644,7 +644,7 @@ function getReturnBaseUrl() {
   return url.href;
 }
 
-function consultarCheckoutIntentoJsonp(intentoId, timeoutMs = 8000) {
+function consultarCheckoutIntentoJsonp(intentoId, timeoutMs = 18000) {
   return new Promise((resolve, reject) => {
     const callbackName = `ecisMpIntento_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const script = document.createElement('script');
@@ -685,21 +685,44 @@ function consultarCheckoutIntentoJsonp(intentoId, timeoutMs = 8000) {
   });
 }
 
-async function esperarResultadoCheckoutIntento(intentoId, timeoutMs = 30000) {
+async function esperarResultadoCheckoutIntento(intentoId, timeoutMs = 60000) {
   const startedAt = Date.now();
+  let ultimoErrorTransitorio = null;
 
   while (Date.now() - startedAt < timeoutMs) {
-    const result = await consultarCheckoutIntentoJsonp(intentoId);
+    try {
+      const result = await consultarCheckoutIntentoJsonp(intentoId, 18000);
 
-    if (result?.resultado === 'redirect' && result.checkoutUrl) return result;
-    if (result?.resultado === 'error') {
-      throw new Error(result.mensaje || 'No pudimos preparar el checkout de Mercado Pago.');
+      if (result?.resultado === 'redirect' && result.checkoutUrl) return result;
+      if (result?.resultado === 'error') {
+        throw new Error(result.mensaje || 'No pudimos preparar el checkout de Mercado Pago.');
+      }
+
+      ultimoErrorTransitorio = null;
+    } catch (error) {
+      const mensaje = String(error?.message || '');
+
+      // Una consulta individual puede demorarse por un arranque en frío de
+      // Apps Script. Eso no significa que haya fallado la creación del checkout.
+      // Reintentamos hasta agotar el tiempo global en vez de cancelar al primer
+      // timeout de red.
+      if (
+        mensaje.includes('demorando más de lo esperado') ||
+        mensaje.includes('No pudimos consultar la preparación de Mercado Pago')
+      ) {
+        ultimoErrorTransitorio = error;
+      } else {
+        throw error;
+      }
     }
 
-    await new Promise(resolve => window.setTimeout(resolve, 700));
+    await new Promise(resolve => window.setTimeout(resolve, 900));
   }
 
-  throw new Error('Mercado Pago está demorando más de lo esperado. Podés volver a intentar sin riesgo de duplicar el cobro.');
+  throw new Error(
+    ultimoErrorTransitorio?.message ||
+    'Mercado Pago está demorando más de lo esperado. Podés volver a intentar sin riesgo de duplicar el cobro.'
+  );
 }
 
 async function submitCheckoutProThroughIframe(payload) {
