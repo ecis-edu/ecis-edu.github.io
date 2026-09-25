@@ -744,6 +744,52 @@ function consultarOrdenMercadoPagoJsonp(codigo, orderId, retorno = '', timeoutMs
   });
 }
 
+function consultarOrdenMercadoPagoPorCodigoJsonp(codigo, retorno = '', timeoutMs = 20000) {
+  return new Promise((resolve, reject) => {
+    if (!codigo) {
+      reject(new Error('No encontramos el código ECIS necesario para verificar la operación.'));
+      return;
+    }
+
+    const callbackName = `ecisMpVerifyCode_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const script = document.createElement('script');
+    let settled = false;
+
+    const cleanup = () => {
+      try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+      script.remove();
+    };
+
+    const timeout = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('La verificación está demorando más de lo esperado.'));
+    }, timeoutMs);
+
+    window[callbackName] = data => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      cleanup();
+      resolve(data || null);
+    };
+
+    script.onerror = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      cleanup();
+      reject(new Error('No pudimos consultar Mercado Pago.'));
+    };
+
+    const separator = ECIS_ENDPOINT.includes('?') ? '&' : '?';
+    script.src = `${ECIS_ENDPOINT}${separator}accion=verificar_checkout_codigo&codigo=${encodeURIComponent(codigo)}&retorno=${encodeURIComponent(retorno)}&callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
+    script.async = true;
+    document.head.appendChild(script);
+  });
+}
+
 function getMpReturnInfo() {
   const params = new URLSearchParams(window.location.search);
   const explicitResult = params.get('mp_result');
@@ -763,34 +809,32 @@ function getMpReturnInfo() {
 
 async function verifyReturnedMercadoPagoPayment(info) {
   const code = info?.codigo || '';
-  const orderId = info?.orderId || '';
+  const orderIdFromReturn = info?.orderId || '';
+  const retorno = info?.routeResult || info?.status || '';
 
   showMpResultState({ code, status: 'verificando' });
 
-  if (!code || !orderId) {
-    const routeStatus = String(info?.routeResult || info?.status || '').toLowerCase();
-    if (routeStatus === 'failure' || routeStatus === 'rejected') {
-      showMpResultState({ code, status: 'rechazado' });
-      clearMpAttemptId();
-      return;
-    }
-
+  if (!code) {
     showMpResultState({
       code,
       status: 'error',
-      detail: 'Mercado Pago nos devolvió a ECIS, pero faltan datos para consultar la operación automáticamente.'
+      detail: 'Mercado Pago nos devolvió a ECIS sin el código necesario para identificar la inscripción.'
     });
     return;
   }
 
   try {
-    const result = await consultarOrdenMercadoPagoJsonp(code, orderId, info?.routeResult || info?.status || '');
+    const result = orderIdFromReturn
+      ? await consultarOrdenMercadoPagoJsonp(code, orderIdFromReturn, retorno)
+      : await consultarOrdenMercadoPagoPorCodigoJsonp(code, retorno);
 
     if (!result || result.resultado === 'error') {
       throw new Error(result?.mensaje || 'No pudimos verificar la operación.');
     }
 
     const finalStatus = result.resultado;
+    const resolvedOrderId = result.orderId || orderIdFromReturn || '';
+
     showMpResultState({
       code,
       status: finalStatus,
@@ -800,7 +844,7 @@ async function verifyReturnedMercadoPagoPayment(info) {
 
     writeJsonStorage(ECIS_MP_ORDER_KEY, {
       codigo: code,
-      orderId,
+      orderId: resolvedOrderId,
       paymentId: result.paymentId || info.paymentId || '',
       resultado: finalStatus,
       experienciaId: paymentDraft?.experienciaId || '',
@@ -814,7 +858,7 @@ async function verifyReturnedMercadoPagoPayment(info) {
         email: paymentDraft?.email || '',
         medioPago: 'MercadoPago',
         resultado: 'aprobado',
-        orderId
+        orderId: resolvedOrderId
       });
       clearMpAttemptId();
     }
