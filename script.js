@@ -577,10 +577,29 @@ async function ensureRegistrationCode() {
   if (reservedRegistrationCode) return reservedRegistrationCode;
 
   const storedOrder = readJsonStorage(ECIS_MP_ORDER_KEY);
-  if (storedOrder?.codigo && /^ECIS-\d{4,}$/.test(storedOrder.codigo)) {
+
+  const mismaInscripcionPendiente = !!(
+    storedOrder?.codigo &&
+    /^ECIS-\d{4,}$/.test(storedOrder.codigo) &&
+    storedOrder.experienciaId === paymentDraft?.experienciaId &&
+    storedOrder.email === paymentDraft?.email &&
+    storedOrder.resultado !== 'aprobado'
+  );
+
+  // Solo reutilizamos el código si corresponde al MISMO intento de inscripción
+  // y ese pago todavía no fue aprobado. Una nueva experiencia debe recibir
+  // siempre un nuevo código ECIS.
+  if (mismaInscripcionPendiente) {
     reservedRegistrationCode = storedOrder.codigo;
     if (mpReservedCode) mpReservedCode.textContent = reservedRegistrationCode;
     return reservedRegistrationCode;
+  }
+
+  // Hay datos de una compra anterior: los descartamos antes de reservar
+  // el código de la nueva inscripción.
+  if (storedOrder) {
+    removeStorage(ECIS_MP_ORDER_KEY);
+    clearMpAttemptId();
   }
 
   if (!registrationCodePromise) {
