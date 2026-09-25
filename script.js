@@ -517,6 +517,7 @@ function updatePaymentMethodSelection() {
 function submitRegistrationThroughIframe(data) {
   if (!postForm || !postPayload) throw new Error('No se pudo preparar el registro.');
   postForm.action = ECIS_ENDPOINT;
+  postForm.target = 'ecis-registration-frame';
   postPayload.value = JSON.stringify(data);
   postForm.submit();
 }
@@ -1076,21 +1077,18 @@ mpRedirectButton?.addEventListener('click', async () => {
   setError(mpPaymentError, '');
   mpRedirectButton.disabled = true;
   mpRedirectButton.setAttribute('aria-busy', 'true');
+
   const originalText = mpRedirectButton.textContent;
   mpRedirectButton.textContent = 'Abriendo Mercado Pago…';
+
   if (mpWaitMessage) mpWaitMessage.hidden = false;
 
   try {
     const codigo = await ensureRegistrationCode();
     const intentoId = getOrCreateMpAttemptId();
 
-    if (!postForm || !postPayload) {
-      throw new Error('No se pudo preparar la conexión con Mercado Pago.');
-    }
-
     const payload = {
       accion: 'mercadopago_checkout_pro',
-      modo: 'directo',
       codigo,
       intentoId,
       nombre: paymentDraft.nombre,
@@ -1102,18 +1100,37 @@ mpRedirectButton?.addEventListener('click', async () => {
       returnUrl: getReturnBaseUrl()
     };
 
-    // En el flujo directo el POST navega la pestaña actual hacia Apps Script.
-    // Apps Script crea la Order y redirige inmediatamente al checkout_url de Mercado Pago.
-    postForm.action = ECIS_ENDPOINT;
-    postForm.target = '_self';
-    postPayload.value = JSON.stringify(payload);
-    postForm.submit();
+    // Apps Script crea la Order en segundo plano dentro del iframe oculto.
+    // ECIS recupera checkout_url mediante el intentoId y recién entonces
+    // navega directamente desde pago.html hacia Mercado Pago.
+    const checkout = await submitCheckoutProThroughIframe(payload);
+
+    if (!checkout?.checkoutUrl || !/^https:\/\//i.test(checkout.checkoutUrl)) {
+      throw new Error('Mercado Pago no devolvió una URL de checkout válida.');
+    }
+
+    writeJsonStorage(ECIS_MP_ORDER_KEY, {
+      codigo,
+      orderId: checkout.orderId || '',
+      paymentId: '',
+      resultado: 'pendiente',
+      experienciaId: paymentDraft.experienciaId,
+      email: paymentDraft.email
+    });
+
+    window.location.assign(checkout.checkoutUrl);
+
   } catch (error) {
     mpRedirectButton.disabled = false;
     mpRedirectButton.removeAttribute('aria-busy');
     mpRedirectButton.textContent = originalText;
+
     if (mpWaitMessage) mpWaitMessage.hidden = true;
-    setError(mpPaymentError, error?.message || 'No pudimos abrir Mercado Pago. Intentá nuevamente.');
+
+    setError(
+      mpPaymentError,
+      error?.message || 'No pudimos abrir Mercado Pago. Intentá nuevamente.'
+    );
   }
 });
 
