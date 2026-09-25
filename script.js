@@ -706,17 +706,14 @@ function submitCheckoutProThroughIframe(payload) {
     return Promise.reject(new Error('Ya estamos preparando Mercado Pago. Esperá unos segundos.'));
   }
 
-  const frame = document.querySelector('#ecis-registration-frame');
-  if (!frame || !frame.contentWindow) {
-    return Promise.reject(new Error('No se pudo preparar la conexión segura con ECIS.'));
-  }
-
   return new Promise((resolve, reject) => {
     let settled = false;
+    let messageHandler = null;
 
     const cleanup = () => {
-      window.clearTimeout(timer);
-      window.removeEventListener('message', onMessage);
+      if (messageHandler) {
+        window.removeEventListener('message', messageHandler);
+      }
       checkoutProWaiter = null;
     };
 
@@ -734,17 +731,15 @@ function submitCheckoutProThroughIframe(payload) {
       reject(error);
     };
 
-    const onMessage = event => {
-      // Solo aceptamos mensajes provenientes del iframe oculto que usamos
-      // para hablar con Apps Script.
-      if (event.source !== frame.contentWindow) return;
-
+    // Canal 1: respuesta inmediata del iframe.
+    // No dependemos de event.source porque Google Apps Script puede entregar
+    // la respuesta desde un contexto intermedio/sandbox. La validación se hace
+    // por tipo de mensaje + código ECIS del intento.
+    messageHandler = event => {
       const data = event.data;
       if (!data || typeof data !== 'object') return;
       if (data.source !== 'ecis-mercadopago-checkout') return;
 
-      // Si Apps Script devuelve un código, debe coincidir con el reservado
-      // para este intento.
       if (data.codigo && payload.codigo && data.codigo !== payload.codigo) return;
 
       if (data.resultado === 'redirect' && data.checkoutUrl) {
@@ -757,24 +752,60 @@ function submitCheckoutProThroughIframe(payload) {
       }
     };
 
-    const timer = window.setTimeout(() => {
-      finishReject(new Error(
-        'Mercado Pago está demorando más de lo esperado. No se generará un segundo cobro automáticamente.'
-      ));
-    }, 30000);
+    window.addEventListener('message', messageHandler);
 
     checkoutProWaiter = {
       codigo: payload.codigo,
       intentoId: payload.intentoId
     };
 
-    window.addEventListener('message', onMessage);
-
+    // Se envía UNA SOLA solicitud para crear la Order.
+    // Nunca se repite este POST automáticamente.
     try {
       submitRegistrationThroughIframe(payload);
     } catch (error) {
       finishReject(error);
+      return;
     }
+
+    // Canal 2: respaldo por consulta del intento.
+    // Si Google no entrega el postMessage, consultamos únicamente el resultado
+    // ya generado. Estas consultas NO crean otra Order ni otro cobro.
+    (async () => {
+      const startedAt = Date.now();
+      const totalTimeoutMs = 60000;
+
+      while (!settled && (Date.now() - startedAt) < totalTimeoutMs) {
+        try {
+          const result = await consultarCheckoutIntentoJsonp(payload.intentoId, 12000);
+
+          if (settled) return;
+
+          if (result?.resultado === 'redirect' && result.checkoutUrl) {
+            finishResolve(result);
+            return;
+          }
+
+          if (result?.resultado === 'error') {
+            finishReject(new Error(result.mensaje || 'No pudimos preparar el checkout de Mercado Pago.'));
+            return;
+          }
+        } catch (_) {
+          // Una consulta puede demorarse o fallar por la redirección interna
+          // de Google Apps Script. No abortamos el intento por un fallo aislado.
+        }
+
+        if (!settled) {
+          await new Promise(resolveWait => window.setTimeout(resolveWait, 1200));
+        }
+      }
+
+      if (!settled) {
+        finishReject(new Error(
+          'No pudimos recuperar la pantalla de Mercado Pago. Este código ECIS quedó cerrado y el próximo intento usará uno nuevo.'
+        ));
+      }
+    })();
   });
 }
 
