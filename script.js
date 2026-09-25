@@ -790,6 +790,91 @@ function consultarOrdenMercadoPagoPorCodigoJsonp(codigo, retorno = '', timeoutMs
   });
 }
 
+function consultarEstadoPagoJsonp(codigo, timeoutMs = 12000) {
+  return new Promise((resolve, reject) => {
+    if (!codigo) {
+      reject(new Error('No encontramos el código ECIS necesario para verificar el pago.'));
+      return;
+    }
+
+    const callbackName = `ecisPago_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const script = document.createElement('script');
+    let settled = false;
+
+    const cleanup = () => {
+      try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+      script.remove();
+    };
+
+    const timeout = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('La consulta del estado está demorando más de lo esperado.'));
+    }, timeoutMs);
+
+    window[callbackName] = data => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      cleanup();
+      resolve(data || null);
+    };
+
+    script.onerror = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      cleanup();
+      reject(new Error('No pudimos consultar el estado de la inscripción.'));
+    };
+
+    const separator = ECIS_ENDPOINT.includes('?') ? '&' : '?';
+    script.src = `${ECIS_ENDPOINT}${separator}accion=consultar_pago&codigo=${encodeURIComponent(codigo)}&callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
+    script.async = true;
+    document.head.appendChild(script);
+  });
+}
+
+async function esperarConfirmacionMercadoPago(codigo, timeoutMs = 45000) {
+  const startedAt = Date.now();
+  let ultimo = null;
+
+  while (Date.now() - startedAt < timeoutMs) {
+    ultimo = await consultarEstadoPagoJsonp(codigo);
+
+    if (ultimo?.resultado === 'ok' && ultimo?.encontrado) {
+      const estado = String(ultimo.estadoPago || '').toLowerCase();
+
+      if (estado.includes('aprobado por mercado pago')) {
+        return { estado: 'aprobado', datos: ultimo };
+      }
+
+      if (
+        estado.includes('no aprobado por mercado pago') ||
+        estado.includes('rechazado')
+      ) {
+        return { estado: 'rechazado', datos: ultimo };
+      }
+    }
+
+    await new Promise(resolve => window.setTimeout(resolve, 1200));
+  }
+
+  return { estado: 'pendiente', datos: ultimo };
+}
+
+function extraerReferenciasMp(observaciones) {
+  const texto = String(observaciones || '');
+  const orderMatch = texto.match(/Order ID MP:\s*([A-Za-z0-9_-]+)/i);
+  const paymentMatch = texto.match(/N\.\s*º?\s*operación MP:\s*([A-Za-z0-9_-]+)/i);
+
+  return {
+    orderId: orderMatch ? orderMatch[1] : '',
+    paymentId: paymentMatch ? paymentMatch[1] : ''
+  };
+}
+
 function getMpReturnInfo() {
   const params = new URLSearchParams(window.location.search);
   const explicitResult = params.get('mp_result');
@@ -809,8 +894,6 @@ function getMpReturnInfo() {
 
 async function verifyReturnedMercadoPagoPayment(info) {
   const code = info?.codigo || '';
-  const orderIdFromReturn = info?.orderId || '';
-  const retorno = info?.routeResult || info?.status || '';
 
   showMpResultState({ code, status: 'verificando' });
 
@@ -824,53 +907,66 @@ async function verifyReturnedMercadoPagoPayment(info) {
   }
 
   try {
-    const result = orderIdFromReturn
-      ? await consultarOrdenMercadoPagoJsonp(code, orderIdFromReturn, retorno)
-      : await consultarOrdenMercadoPagoPorCodigoJsonp(code, retorno);
+    // El Webhook ya valida la Order directamente contra Mercado Pago antes
+    // de marcarla como aprobada. Al volver al sitio, el navegador solo espera
+    // esa confirmación del backend y evita depender de order_id en la URL.
+    const verificacion = await esperarConfirmacionMercadoPago(code);
+    const datos = verificacion?.datos || {};
+    const refs = extraerReferenciasMp(datos.observaciones);
 
-    if (!result || result.resultado === 'error') {
-      throw new Error(result?.mensaje || 'No pudimos verificar la operación.');
-    }
+    if (verificacion.estado === 'aprobado') {
+      showMpResultState({
+        code,
+        status: 'aprobado',
+        message: 'Mercado Pago confirmó tu pago.',
+        detail: 'La operación fue validada por ECIS mediante la confirmación recibida desde Mercado Pago.'
+      });
 
-    const finalStatus = result.resultado;
-    const resolvedOrderId = result.orderId || orderIdFromReturn || '';
+      writeJsonStorage(ECIS_MP_ORDER_KEY, {
+        codigo: code,
+        orderId: refs.orderId || info?.orderId || '',
+        paymentId: refs.paymentId || info?.paymentId || '',
+        resultado: 'aprobado',
+        experienciaId: paymentDraft?.experienciaId || '',
+        email: paymentDraft?.email || ''
+      });
 
-    showMpResultState({
-      code,
-      status: finalStatus,
-      message: result.mensaje || '',
-      detail: result.detalle || ''
-    });
-
-    writeJsonStorage(ECIS_MP_ORDER_KEY, {
-      codigo: code,
-      orderId: resolvedOrderId,
-      paymentId: result.paymentId || info.paymentId || '',
-      resultado: finalStatus,
-      experienciaId: paymentDraft?.experienciaId || '',
-      email: paymentDraft?.email || ''
-    });
-
-    if (finalStatus === 'aprobado') {
       writeJsonStorage(ECIS_RESULT_KEY, {
         codigo: code,
         experienciaId: paymentDraft?.experienciaId || '',
         email: paymentDraft?.email || '',
         medioPago: 'MercadoPago',
         resultado: 'aprobado',
-        orderId: resolvedOrderId
+        orderId: refs.orderId || info?.orderId || ''
       });
+
       clearMpAttemptId();
+      return;
     }
 
-    if (finalStatus === 'rechazado') {
+    if (verificacion.estado === 'rechazado') {
+      showMpResultState({
+        code,
+        status: 'rechazado'
+      });
       clearMpAttemptId();
+      return;
     }
+
+    // Si el Webhook todavía no terminó, no mostramos un error falso.
+    showMpResultState({
+      code,
+      status: 'pendiente',
+      message: 'Mercado Pago todavía está procesando la confirmación.',
+      detail: 'No realices un segundo pago. Conservá tu código ECIS; la inscripción se actualizará automáticamente cuando llegue la confirmación.'
+    });
+
   } catch (error) {
     showMpResultState({
       code,
-      status: 'error',
-      detail: error?.message || 'No pudimos verificar el pago en este momento.'
+      status: 'pendiente',
+      message: 'Estamos esperando la confirmación de Mercado Pago.',
+      detail: 'No realices un segundo pago. Conservá tu código ECIS; si el pago fue aprobado, la inscripción se actualizará automáticamente.'
     });
   }
 }
