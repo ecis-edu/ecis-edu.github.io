@@ -285,6 +285,7 @@ function restoreEnrollmentDraft() {
 
   const mapping = {
     nombre: '#enroll-name',
+    apellido: '#enroll-last-name',
     email: '#enroll-email',
     dni: '#enroll-dni',
     telefono: '#enroll-phone',
@@ -321,6 +322,7 @@ if (enrollmentForm) {
 
     const data = {
       nombre: String(document.querySelector('#enroll-name')?.value || '').trim(),
+      apellido: String(document.querySelector('#enroll-last-name')?.value || '').trim(),
       email: String(document.querySelector('#enroll-email')?.value || '').trim(),
       dni: String(document.querySelector('#enroll-dni')?.value || '').trim(),
       telefono: String(document.querySelector('#enroll-phone')?.value || '').trim(),
@@ -388,11 +390,18 @@ let reservedRegistrationCode = '';
 let registrationCodePromise = null;
 let checkoutProWaiter = null;
 
+function getEnrollmentFullName(data) {
+  return [data?.nombre, data?.apellido]
+    .map(value => String(value || '').trim())
+    .filter(Boolean)
+    .join(' ');
+}
+
 function renderPaymentSummary(data) {
   if (!paymentSummary) return;
 
   const rows = [
-    ['Nombre y apellido', data.nombre],
+    ['Nombre y apellido', getEnrollmentFullName(data)],
     ['Correo electrónico', data.email],
     ['DNI', data.dni],
     ['Teléfono', data.telefono],
@@ -426,7 +435,7 @@ function buildProofLinks(code, data) {
     '',
     `Código de inscripción: ${code}`,
     `Experiencia: ${data.experiencia}`,
-    `Nombre y apellido: ${data.nombre}`,
+    `Nombre y apellido: ${getEnrollmentFullName(data)}`,
     '',
     'Adjunto el comprobante de transferencia.',
     '',
@@ -1154,6 +1163,7 @@ mpRedirectButton?.addEventListener('click', async () => {
       codigo,
       intentoId,
       nombre: paymentDraft.nombre,
+      apellido: paymentDraft.apellido || '',
       dni: paymentDraft.dni,
       email: paymentDraft.email,
       telefono: paymentDraft.telefono,
@@ -1288,6 +1298,7 @@ transferDone?.addEventListener('click', async () => {
     const payload = {
       codigo,
       nombre: paymentDraft.nombre,
+      apellido: paymentDraft.apellido || '',
       dni: paymentDraft.dni,
       email: paymentDraft.email,
       telefono: paymentDraft.telefono,
