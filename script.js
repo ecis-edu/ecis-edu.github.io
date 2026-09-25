@@ -701,19 +701,81 @@ async function esperarResultadoCheckoutIntento(intentoId, timeoutMs = 30000) {
   throw new Error('Mercado Pago está demorando más de lo esperado. Podés volver a intentar sin riesgo de duplicar el cobro.');
 }
 
-async function submitCheckoutProThroughIframe(payload) {
+function submitCheckoutProThroughIframe(payload) {
   if (checkoutProWaiter) {
-    throw new Error('Ya estamos preparando Mercado Pago. Esperá unos segundos.');
+    return Promise.reject(new Error('Ya estamos preparando Mercado Pago. Esperá unos segundos.'));
   }
 
-  checkoutProWaiter = true;
-
-  try {
-    submitRegistrationThroughIframe(payload);
-    return await esperarResultadoCheckoutIntento(payload.intentoId);
-  } finally {
-    checkoutProWaiter = null;
+  const frame = document.querySelector('#ecis-registration-frame');
+  if (!frame || !frame.contentWindow) {
+    return Promise.reject(new Error('No se pudo preparar la conexión segura con ECIS.'));
   }
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+
+    const cleanup = () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('message', onMessage);
+      checkoutProWaiter = null;
+    };
+
+    const finishResolve = data => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(data);
+    };
+
+    const finishReject = error => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+
+    const onMessage = event => {
+      // Solo aceptamos mensajes provenientes del iframe oculto que usamos
+      // para hablar con Apps Script.
+      if (event.source !== frame.contentWindow) return;
+
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.source !== 'ecis-mercadopago-checkout') return;
+
+      // Si Apps Script devuelve un código, debe coincidir con el reservado
+      // para este intento.
+      if (data.codigo && payload.codigo && data.codigo !== payload.codigo) return;
+
+      if (data.resultado === 'redirect' && data.checkoutUrl) {
+        finishResolve(data);
+        return;
+      }
+
+      if (data.resultado === 'error') {
+        finishReject(new Error(data.mensaje || 'No pudimos preparar el checkout de Mercado Pago.'));
+      }
+    };
+
+    const timer = window.setTimeout(() => {
+      finishReject(new Error(
+        'Mercado Pago está demorando más de lo esperado. No se generará un segundo cobro automáticamente.'
+      ));
+    }, 30000);
+
+    checkoutProWaiter = {
+      codigo: payload.codigo,
+      intentoId: payload.intentoId
+    };
+
+    window.addEventListener('message', onMessage);
+
+    try {
+      submitRegistrationThroughIframe(payload);
+    } catch (error) {
+      finishReject(error);
+    }
+  });
 }
 
 function consultarOrdenMercadoPagoJsonp(codigo, orderId, retorno = '', timeoutMs = 20000) {
