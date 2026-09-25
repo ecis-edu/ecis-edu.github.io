@@ -380,6 +380,7 @@ const mpRetryPayment = document.querySelector('#mp-retry-payment');
 
 let paymentDraft = null;
 let reservedRegistrationCode = '';
+let reservedRegistrationToken = '';
 let registrationCodePromise = null;
 let checkoutProWaiter = null;
 
@@ -473,7 +474,7 @@ function showMpResultState({ code, status = 'verificando', message = '', detail 
       symbol: '!',
       title: 'El pago no se completó',
       message: 'Mercado Pago informó que la operación no fue aprobada.',
-      detail: 'Podés volver a intentarlo y elegir nuevamente el medio de pago dentro de Mercado Pago.'
+      detail: 'Si querés volver a intentarlo, ECIS generará un código de inscripción nuevo.'
     },
     error: {
       symbol: '!',
@@ -550,12 +551,15 @@ function reserveRegistrationCodeJsonp(timeoutMs = 30000) {
       window.clearTimeout(timeout);
       cleanup();
 
-      if (!data || data.resultado !== 'ok' || !data.codigo) {
+      if (!data || data.resultado !== 'ok' || !data.codigo || !data.reservaToken) {
         reject(new Error(data?.mensaje || 'No pudimos generar el código de inscripción.'));
         return;
       }
 
-      resolve(String(data.codigo));
+      resolve({
+        codigo: String(data.codigo),
+        reservaToken: String(data.reservaToken)
+      });
     };
 
     script.onerror = () => {
@@ -574,40 +578,24 @@ function reserveRegistrationCodeJsonp(timeoutMs = 30000) {
 }
 
 async function ensureRegistrationCode() {
-  if (reservedRegistrationCode) return reservedRegistrationCode;
-
-  const storedOrder = readJsonStorage(ECIS_MP_ORDER_KEY);
-
-  const mismaInscripcionPendiente = !!(
-    storedOrder?.codigo &&
-    /^ECIS-\d{4,}$/.test(storedOrder.codigo) &&
-    storedOrder.experienciaId === paymentDraft?.experienciaId &&
-    storedOrder.email === paymentDraft?.email &&
-    storedOrder.resultado !== 'aprobado'
-  );
-
-  // Solo reutilizamos el código si corresponde al MISMO intento de inscripción
-  // y ese pago todavía no fue aprobado. Una nueva experiencia debe recibir
-  // siempre un nuevo código ECIS.
-  if (mismaInscripcionPendiente) {
-    reservedRegistrationCode = storedOrder.codigo;
-    if (mpReservedCode) mpReservedCode.textContent = reservedRegistrationCode;
-    return reservedRegistrationCode;
-  }
-
-  // Hay datos de una compra anterior: los descartamos antes de reservar
-  // el código de la nueva inscripción.
-  if (storedOrder) {
-    removeStorage(ECIS_MP_ORDER_KEY);
-    clearMpAttemptId();
+  if (reservedRegistrationCode && reservedRegistrationToken) {
+    return {
+      codigo: reservedRegistrationCode,
+      reservaToken: reservedRegistrationToken
+    };
   }
 
   if (!registrationCodePromise) {
     registrationCodePromise = reserveRegistrationCodeJsonp()
-      .then(code => {
-        reservedRegistrationCode = code;
-        if (mpReservedCode) mpReservedCode.textContent = code;
-        return code;
+      .then(reserva => {
+        reservedRegistrationCode = reserva.codigo;
+        reservedRegistrationToken = reserva.reservaToken;
+
+        if (mpReservedCode) {
+          mpReservedCode.textContent = reservedRegistrationCode;
+        }
+
+        return reserva;
       })
       .finally(() => {
         registrationCodePromise = null;
@@ -615,6 +603,12 @@ async function ensureRegistrationCode() {
   }
 
   return registrationCodePromise;
+}
+
+function resetRegistrationReservation() {
+  reservedRegistrationCode = '';
+  reservedRegistrationToken = '';
+  registrationCodePromise = null;
 }
 
 function createUuid() {
@@ -905,12 +899,10 @@ function getMpReturnInfo() {
   const hasMpParams = explicitResult || params.get('order_id') || params.get('external_reference') || params.get('payment_id');
   if (!hasMpParams) return null;
 
-  const stored = readJsonStorage(ECIS_MP_ORDER_KEY) || {};
-
   return {
     routeResult: explicitResult || params.get('status') || params.get('collection_status') || '',
-    codigo: params.get('external_reference') || params.get('codigo') || stored.codigo || reservedRegistrationCode || '',
-    orderId: params.get('order_id') || stored.orderId || '',
+    codigo: params.get('external_reference') || params.get('codigo') || '',
+    orderId: params.get('order_id') || '',
     paymentId: params.get('payment_id') || params.get('collection_id') || '',
     status: params.get('status') || params.get('collection_status') || ''
   };
@@ -1027,24 +1019,14 @@ function initializePaymentPage() {
     return;
   }
 
-  const previousResult = readJsonStorage(ECIS_RESULT_KEY);
-  if (
-    previousResult?.codigo &&
-    previousResult?.experienciaId === paymentDraft.experienciaId &&
-    previousResult?.email === paymentDraft.email
-  ) {
-    if (previousResult.medioPago === 'MercadoPago' && previousResult.resultado === 'aprobado') {
-      showMpResultState({ code: previousResult.codigo, status: 'aprobado' });
-    } else {
-      showFinishedState(previousResult.codigo, paymentDraft);
-    }
-    return;
-  }
+  // Cada llegada nueva a pago.html representa una inscripción nueva.
+  // No reutilizamos códigos ni resultados guardados de operaciones anteriores.
+  resetRegistrationReservation();
+  clearMpAttemptId();
 
-  ensureRegistrationCode().catch(error => {
-    console.warn('ECIS: no se pudo reservar anticipadamente el código.', error);
-    if (mpReservedCode) mpReservedCode.textContent = 'Se generará al continuar';
-  });
+  if (mpReservedCode) {
+    mpReservedCode.textContent = 'Se generará al continuar';
+  }
 }
 
 paymentMethodInputs.forEach(input => {
@@ -1075,8 +1057,8 @@ paymentProceed?.addEventListener('click', async () => {
     }
 
     try {
-      const code = await ensureRegistrationCode();
-      if (mpReservedCode) mpReservedCode.textContent = code;
+      const reserva = await ensureRegistrationCode();
+      if (mpReservedCode) mpReservedCode.textContent = reserva.codigo;
     } catch (error) {
       if (mpReservedCode) mpReservedCode.textContent = 'No disponible';
       setError(mpPaymentError, error?.message || 'No pudimos generar el código de inscripción.');
@@ -1107,12 +1089,14 @@ mpRedirectButton?.addEventListener('click', async () => {
   if (mpWaitMessage) mpWaitMessage.hidden = false;
 
   try {
-    const codigo = await ensureRegistrationCode();
+    const reserva = await ensureRegistrationCode();
+    const codigo = reserva.codigo;
     const intentoId = getOrCreateMpAttemptId();
 
     const payload = {
       accion: 'mercadopago_checkout_pro',
       codigo,
+      reservaToken: reserva.reservaToken,
       intentoId,
       nombre: paymentDraft.nombre,
       dni: paymentDraft.dni,
@@ -1144,6 +1128,15 @@ mpRedirectButton?.addEventListener('click', async () => {
     window.location.assign(checkout.checkoutUrl);
 
   } catch (error) {
+    // Si el intento falló, ese código queda retirado. El siguiente intento
+    // debe reservar un código ECIS nuevo.
+    resetRegistrationReservation();
+    clearMpAttemptId();
+
+    if (mpReservedCode) {
+      mpReservedCode.textContent = 'Se generará un nuevo código al reintentar';
+    }
+
     mpRedirectButton.disabled = false;
     mpRedirectButton.removeAttribute('aria-busy');
     mpRedirectButton.textContent = originalText;
@@ -1152,12 +1145,15 @@ mpRedirectButton?.addEventListener('click', async () => {
 
     setError(
       mpPaymentError,
-      error?.message || 'No pudimos abrir Mercado Pago. Intentá nuevamente.'
+      error?.message || 'No pudimos abrir Mercado Pago. El próximo intento usará un código nuevo.'
     );
   }
 });
 
-mpRetryPayment?.addEventListener('click', () => {
+mpRetryPayment?.addEventListener('click', async () => {
+  // Un rechazo cierra definitivamente ese código. El reintento comienza
+  // como una inscripción nueva y obtiene otro código ECIS.
+  resetRegistrationReservation();
   clearMpAttemptId();
   removeStorage(ECIS_RESULT_KEY);
 
@@ -1179,6 +1175,16 @@ mpRetryPayment?.addEventListener('click', () => {
   if (mpCheckout) {
     mpCheckout.hidden = false;
     mpCheckout.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  if (mpReservedCode) mpReservedCode.textContent = 'Generando nuevo código…';
+
+  try {
+    const reserva = await ensureRegistrationCode();
+    if (mpReservedCode) mpReservedCode.textContent = reserva.codigo;
+  } catch (error) {
+    if (mpReservedCode) mpReservedCode.textContent = 'No disponible';
+    setError(mpPaymentError, error?.message || 'No pudimos generar un nuevo código de inscripción.');
   }
 });
 
@@ -1216,24 +1222,18 @@ transferDone?.addEventListener('click', async () => {
   if (!paymentDraft || !transferDone) return;
   setError(paymentError, '');
 
-  const previous = readJsonStorage(ECIS_RESULT_KEY);
-  if (previous?.codigo && previous?.experienciaId === paymentDraft.experienciaId && previous?.email === paymentDraft.email &&
-      previous?.medioPago !== 'MercadoPago'
-  ) {
-    showFinishedState(previous.codigo, paymentDraft);
-    return;
-  }
-
   transferDone.disabled = true;
   transferDone.textContent = 'Generando código…';
 
   try {
     // Primero reservamos un código único. De esta forma la web puede mostrarlo
     // sin depender de una confirmación automática del pago.
-    const codigo = await ensureRegistrationCode();
+    const reserva = await ensureRegistrationCode();
+    const codigo = reserva.codigo;
 
     const payload = {
       codigo,
+      reservaToken: reserva.reservaToken,
       nombre: paymentDraft.nombre,
       dni: paymentDraft.dni,
       email: paymentDraft.email,
@@ -1261,6 +1261,21 @@ transferDone?.addEventListener('click', async () => {
     transferDone.disabled = false;
     transferDone.textContent = 'Ya realicé la transferencia →';
     setError(paymentError, error?.message || 'No pudimos generar tu código de inscripción. Intentá nuevamente.');
+  }
+});
+
+window.addEventListener('pageshow', event => {
+  if (!event.persisted || !paymentSummary) return;
+  if (getMpReturnInfo()) return;
+
+  // Si el navegador restaura pago.html desde su caché de navegación,
+  // descartamos cualquier reserva anterior. El próximo intento debe usar
+  // un código ECIS nuevo.
+  resetRegistrationReservation();
+  clearMpAttemptId();
+
+  if (mpReservedCode) {
+    mpReservedCode.textContent = 'Se generará al continuar';
   }
 });
 
