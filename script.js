@@ -1,23 +1,154 @@
 // =========================================================
-// ECIS — navegación, contacto e inscripción
+// ECIS — sitio web limpio 105
+// Navegación, contacto, inscripción y pago híbrido Link + QR
 // =========================================================
 
 const ECIS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwm5voUlP5k02F-bNalKUkUknY2SvKe6PVpgOivqn8z0zKPKHNzGmII0UNxJLfljTkp/exec';
 const ECIS_STORAGE_KEY = 'ecis_enrollment_draft';
 const ECIS_RESULT_KEY = 'ecis_enrollment_result';
+const ECIS_REGISTRATION_ATTEMPT_PREFIX = 'ecis_registration_attempt_';
+const ECIS_PAYMENT_STAGE_KEY = 'ecis_payment_stage';
 const ECIS_WHATSAPP = '5401136741338';
 const ECIS_EMAIL = 'ecis.ar.edu@gmail.com';
-const ECIS_MP_ORDER_KEY = 'ecis_mp_order';
-const ECIS_MP_ATTEMPT_KEY = 'ecis_mp_attempt';
 
-// Año del footer
+// Cada link de Mercado Pago está asociado de forma explícita a una experiencia
+// y a su importe. Si el importe de la hoja cambia, Mercado Pago se deshabilita
+// para evitar cobrar un monto incorrecto mediante un link fijo.
+const ECIS_MP_LINKS = {
+  HM001: {
+    url: 'https://mpago.la/2QWYbxw',
+    qr: 'assets/images/mercadopago-link-qr.png',
+    amount: 15000
+  }
+};
+
+// =========================================================
+// Utilidades generales
+// =========================================================
+
 document.querySelectorAll('#year').forEach(el => {
   el.textContent = new Date().getFullYear();
 });
 
+function readJsonStorage(key) {
+  try {
+    const raw = sessionStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeJsonStorage(key, value) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch (_) {}
+}
+
+function removeStorage(key) {
+  try { sessionStorage.removeItem(key); } catch (_) {}
+}
+
+function clearRegistrationAttempts() {
+  try {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(ECIS_REGISTRATION_ATTEMPT_PREFIX)) localStorage.removeItem(key);
+    });
+  } catch (_) {}
+}
+
+function createRegistrationAttemptId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => {
+    const r = Math.random() * 16 | 0;
+    const v = char === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+function getRegistrationAttemptId(method) {
+  const suffix = String(method || 'registro').toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
+  const key = ECIS_REGISTRATION_ATTEMPT_PREFIX + suffix;
+  try {
+    const existing = localStorage.getItem(key);
+    if (existing) return existing;
+
+    // Compatibilidad con la versión 103: si el intento quedó en sessionStorage,
+    // lo migramos para poder recuperar el código ya generado.
+    const legacy = sessionStorage.getItem(key);
+    if (legacy) {
+      localStorage.setItem(key, legacy);
+      return legacy;
+    }
+
+    const created = createRegistrationAttemptId();
+    localStorage.setItem(key, created);
+    return created;
+  } catch (_) {
+    return createRegistrationAttemptId();
+  }
+}
+
+function formatArs(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '—';
+  return `ARS $${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(number)}`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function setError(element, message) {
+  if (!element) return;
+  element.textContent = message || '';
+  element.hidden = !message;
+}
+
+function prefersReducedMotion() {
+  return Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+}
+
+function smoothScrollTo(element, block = 'center') {
+  element?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block });
+}
+
+function getEnrollmentFullName(data) {
+  return [data?.nombre, data?.apellido]
+    .map(value => String(value || '').trim())
+    .filter(Boolean)
+    .join(' ');
+}
+
+function getMpLinkConfig(data) {
+  const id = String(data?.experienciaId || '');
+  const config = ECIS_MP_LINKS[id];
+  if (!config) return null;
+
+  const amount = Number(data?.importe);
+  if (!Number.isFinite(amount) || amount !== Number(config.amount)) return null;
+  return config;
+}
+
+// =========================================================
 // Navegación móvil
+// =========================================================
+
 const menuToggle = document.querySelector('.menu-toggle');
 const nav = document.querySelector('#main-nav');
+
+function closeMobileNav({ focusToggle = false } = {}) {
+  nav?.classList.remove('is-open');
+  document.body.classList.remove('nav-open');
+  menuToggle?.setAttribute('aria-expanded', 'false');
+  menuToggle?.setAttribute('aria-label', 'Abrir menú');
+  if (focusToggle) menuToggle?.focus();
+}
 
 menuToggle?.addEventListener('click', () => {
   const open = menuToggle.getAttribute('aria-expanded') === 'true';
@@ -27,12 +158,9 @@ menuToggle?.addEventListener('click', () => {
   document.body.classList.toggle('nav-open', !open);
 });
 
-nav?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
-  menuToggle?.setAttribute('aria-expanded', 'false');
-  menuToggle?.setAttribute('aria-label', 'Abrir menú');
-  nav?.classList.remove('is-open');
-  document.body.classList.remove('nav-open');
-}));
+nav?.querySelectorAll('a').forEach(link => {
+  link.addEventListener('click', () => closeMobileNav());
+});
 
 const currentFile = window.location.pathname.split('/').pop() || 'index.html';
 nav?.querySelectorAll('a').forEach(link => {
@@ -41,26 +169,18 @@ nav?.querySelectorAll('a').forEach(link => {
 
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && nav?.classList.contains('is-open')) {
-    nav.classList.remove('is-open');
-    document.body.classList.remove('nav-open');
-    menuToggle?.setAttribute('aria-expanded', 'false');
-    menuToggle?.setAttribute('aria-label', 'Abrir menú');
-    menuToggle?.focus();
+    closeMobileNav({ focusToggle: true });
   }
 });
 
 window.addEventListener('resize', () => {
-  if (window.innerWidth > 850 && nav?.classList.contains('is-open')) {
-    nav.classList.remove('is-open');
-    document.body.classList.remove('nav-open');
-    menuToggle?.setAttribute('aria-expanded', 'false');
-    menuToggle?.setAttribute('aria-label', 'Abrir menú');
-  }
+  if (window.innerWidth > 850 && nav?.classList.contains('is-open')) closeMobileNav();
 });
 
 // =========================================================
 // Formulario de contacto
 // =========================================================
+
 const contactForm = document.querySelector('.contact-form[data-formsubmit-ajax]');
 const formStatus = document.querySelector('#form-status');
 
@@ -107,7 +227,6 @@ contactForm?.addEventListener('submit', async event => {
     }
 
     contactForm.reset();
-
     if (formStatus) {
       formStatus.textContent = 'Gracias por comunicarte con ECIS. Recibimos tu consulta y te responderemos a la brevedad.';
       formStatus.hidden = false;
@@ -129,54 +248,9 @@ contactForm?.addEventListener('submit', async event => {
 });
 
 // =========================================================
-// Utilidades de inscripción
+// Inscripción — inscripcion.html
 // =========================================================
-function readJsonStorage(key) {
-  try {
-    const raw = sessionStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch (_) {
-    return null;
-  }
-}
 
-function writeJsonStorage(key, value) {
-  try {
-    sessionStorage.setItem(key, JSON.stringify(value));
-  } catch (_) {}
-}
-
-function removeStorage(key) {
-  try { sessionStorage.removeItem(key); } catch (_) {}
-}
-
-function formatArs(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return '—';
-  const formatted = new Intl.NumberFormat('es-AR', {
-    maximumFractionDigits: 0
-  }).format(number);
-  return `ARS $${formatted}`;
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function setError(element, message) {
-  if (!element) return;
-  element.textContent = message || '';
-  element.hidden = !message;
-}
-
-// =========================================================
-// Página 1 — inscripcion.html
-// =========================================================
 const enrollmentForm = document.querySelector('#ecis-enrollment-form');
 const experienceSelect = document.querySelector('#enroll-experience');
 const experienceHelp = document.querySelector('#experience-help');
@@ -185,12 +259,12 @@ const enrollmentError = document.querySelector('#enrollment-error');
 
 let loadedExperiences = [];
 
-function loadExperiencesJsonp() {
+function loadExperiencesJsonp(timeoutMs = 12000) {
   if (!experienceSelect) return Promise.resolve([]);
 
   experienceSelect.disabled = true;
   experienceSelect.innerHTML = '<option value="">Cargando experiencias…</option>';
-  experienceRetry.hidden = true;
+  if (experienceRetry) experienceRetry.hidden = true;
   setError(enrollmentError, '');
 
   return new Promise((resolve, reject) => {
@@ -208,7 +282,7 @@ function loadExperiencesJsonp() {
       settled = true;
       cleanup();
       reject(new Error('Tiempo de espera agotado.'));
-    }, 12000);
+    }, timeoutMs);
 
     window[callbackName] = data => {
       if (settled) return;
@@ -243,8 +317,8 @@ async function populateExperiences() {
 
   try {
     loadedExperiences = await loadExperiencesJsonp();
-
     experienceSelect.innerHTML = '<option value="">Seleccioná una experiencia</option>';
+
     loadedExperiences.forEach(item => {
       const option = document.createElement('option');
       option.value = String(item.id || '');
@@ -255,10 +329,12 @@ async function populateExperiences() {
       experienceSelect.appendChild(option);
     });
 
-    experienceSelect.disabled = false;
-    experienceHelp.textContent = loadedExperiences.length
-      ? 'El importe correspondiente se mostrará en el siguiente paso.'
-      : 'No hay experiencias disponibles en este momento.';
+    experienceSelect.disabled = !loadedExperiences.length;
+    if (experienceHelp) {
+      experienceHelp.textContent = loadedExperiences.length
+        ? 'El importe correspondiente se mostrará en el siguiente paso.'
+        : 'No hay experiencias disponibles en este momento.';
+    }
 
     const draft = readJsonStorage(ECIS_STORAGE_KEY);
     const requestedId = new URLSearchParams(window.location.search).get('experiencia');
@@ -267,13 +343,11 @@ async function populateExperiences() {
     if (preferredId && loadedExperiences.some(item => String(item.id) === String(preferredId))) {
       experienceSelect.value = String(preferredId);
     }
-
-    if (!loadedExperiences.length) experienceSelect.disabled = true;
   } catch (_) {
     experienceSelect.innerHTML = '<option value="">No se pudieron cargar las experiencias</option>';
     experienceSelect.disabled = true;
-    experienceHelp.textContent = 'Verificá tu conexión e intentá nuevamente.';
-    experienceRetry.hidden = false;
+    if (experienceHelp) experienceHelp.textContent = 'Verificá tu conexión e intentá nuevamente.';
+    if (experienceRetry) experienceRetry.hidden = false;
     setError(enrollmentError, 'No pudimos cargar las experiencias disponibles.');
   }
 }
@@ -301,7 +375,6 @@ function restoreEnrollmentDraft() {
 if (enrollmentForm) {
   restoreEnrollmentDraft();
   populateExperiences();
-
   experienceRetry?.addEventListener('click', populateExperiences);
 
   enrollmentForm.addEventListener('submit', event => {
@@ -314,7 +387,7 @@ if (enrollmentForm) {
     }
 
     const selected = experienceSelect?.selectedOptions?.[0];
-    if (!selected || !selected.value) {
+    if (!selected?.value) {
       setError(enrollmentError, 'Seleccioná una experiencia para continuar.');
       experienceSelect?.focus();
       return;
@@ -333,29 +406,29 @@ if (enrollmentForm) {
       importe: Number(selected.dataset.amount || 0)
     };
 
-    if (!data.experienciaId || !data.experiencia || !Number.isFinite(data.importe) || data.importe <= 0) {
+    if (!data.experiencia || !Number.isFinite(data.importe) || data.importe <= 0) {
       setError(enrollmentError, 'No pudimos obtener los datos de la experiencia seleccionada. Reintentá la carga.');
       return;
     }
 
-    // Una nueva inscripción empieza limpia. Nunca arrastramos el código
-    // ni la Order de una inscripción anterior.
-    removeStorage(ECIS_MP_ORDER_KEY);
+    // Cada envío del formulario inicia una inscripción nueva y limpia.
     removeStorage(ECIS_RESULT_KEY);
-    clearMpAttemptId();
-
+    clearRegistrationAttempts();
+    removeStorage(ECIS_PAYMENT_STAGE_KEY);
     writeJsonStorage(ECIS_STORAGE_KEY, data);
     window.location.href = 'pago.html';
   });
 }
 
 // =========================================================
-// Página 2 — pago.html
+// Pago — pago.html
 // =========================================================
+
 const paymentSummary = document.querySelector('#payment-summary');
 const paymentAmount = document.querySelector('#payment-amount');
 const transferAmount = document.querySelector('#transfer-amount');
 const paymentProceed = document.querySelector('#payment-proceed');
+const paymentMethodCard = document.querySelector('#payment-method-card');
 const transferCheckout = document.querySelector('#transfer-checkout');
 const paymentError = document.querySelector('#payment-error');
 const transferDone = document.querySelector('#transfer-done');
@@ -371,30 +444,118 @@ const postPayload = document.querySelector('#ecis-registration-payload');
 const paymentMethodInputs = Array.from(document.querySelectorAll('input[name="paymentMethod"]'));
 
 const mpCheckout = document.querySelector('#mp-checkout');
-const mpReservedCode = document.querySelector('#mp-reserved-code');
+const mpConfirmCheckout = document.querySelector('#mp-confirm-checkout');
 const mpCheckoutAmount = document.querySelector('#mp-checkout-amount');
 const mpPaymentError = document.querySelector('#mp-payment-error');
-const mpWaitMessage = document.querySelector('#mp-wait-message');
 const mpRedirectButton = document.querySelector('#mp-redirect-button');
-const mpResultPanel = document.querySelector('#mp-result-panel');
-const mpResultCheck = document.querySelector('#mp-result-check');
-const mpResultTitle = document.querySelector('#mp-result-title');
-const mpResultCode = document.querySelector('#mp-result-code');
-const copyMpResultCode = document.querySelector('#copy-mp-result-code');
-const mpResultMessage = document.querySelector('#mp-result-message');
-const mpResultDetail = document.querySelector('#mp-result-detail');
-const mpRetryPayment = document.querySelector('#mp-retry-payment');
+const mpHybridOptions = document.querySelector('#mp-hybrid-options');
+const mpDone = document.querySelector('#mp-done');
+const mpQrImage = document.querySelector('#mp-qr-image');
+const mpQrContinue = document.querySelector('#mp-qr-continue');
+const mpReopenButton = document.querySelector('#mp-reopen-button');
+const paymentBackButtons = Array.from(document.querySelectorAll('[data-payment-back]'));
+const mpConfirmBack = document.querySelector('#mp-confirm-back');
+const progressData = document.querySelector('#progress-data');
+const progressPayment = document.querySelector('#progress-payment');
+const progressProof = document.querySelector('#progress-proof');
 
 let paymentDraft = null;
-let reservedRegistrationCode = '';
-let registrationCodePromise = null;
-let checkoutProWaiter = null;
+let registrationPostPromise = null;
+let paymentCloseWarningActive = false;
 
-function getEnrollmentFullName(data) {
-  return [data?.nombre, data?.apellido]
-    .map(value => String(value || '').trim())
-    .filter(Boolean)
-    .join(' ');
+function setPaymentCloseWarning(active) {
+  paymentCloseWarningActive = Boolean(active);
+}
+
+window.addEventListener('beforeunload', event => {
+  if (!paymentCloseWarningActive) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
+
+function writePaymentStage(method, stage) {
+  if (!paymentDraft) return;
+  writeJsonStorage(ECIS_PAYMENT_STAGE_KEY, {
+    experienciaId: paymentDraft.experienciaId,
+    email: paymentDraft.email,
+    method,
+    stage
+  });
+}
+
+function readPaymentStage() {
+  const stored = readJsonStorage(ECIS_PAYMENT_STAGE_KEY);
+  if (!stored || !paymentDraft) return null;
+  if (stored.experienciaId !== paymentDraft.experienciaId) return null;
+  if (stored.email !== paymentDraft.email) return null;
+  return stored;
+}
+
+function clearPaymentStage() {
+  removeStorage(ECIS_PAYMENT_STAGE_KEY);
+  setPaymentCloseWarning(false);
+}
+
+function updateCheckoutProgress(stage = 'payment') {
+  [progressData, progressPayment, progressProof].forEach(item => item?.classList.remove('is-current', 'is-complete'));
+  progressData?.classList.add('is-complete');
+  if (stage === 'proof') {
+    progressPayment?.classList.add('is-complete');
+    progressProof?.classList.add('is-current');
+  } else {
+    progressPayment?.classList.add('is-current');
+  }
+}
+
+function setCheckoutVisibility({ choice = false, transfer = false, mp = false, mpConfirm = false } = {}) {
+  if (paymentMethodCard) paymentMethodCard.hidden = !choice;
+  if (transferCheckout) transferCheckout.hidden = !transfer;
+  if (mpCheckout) mpCheckout.hidden = !mp;
+  if (mpConfirmCheckout) mpConfirmCheckout.hidden = !mpConfirm;
+}
+
+function showPaymentChoice({ scroll = true } = {}) {
+  setCheckoutVisibility({ choice: true });
+  clearPaymentStage();
+  updateCheckoutProgress('payment');
+  if (scroll) smoothScrollTo(paymentMethodCard, 'start');
+}
+
+function showTransferStep({ scroll = true } = {}) {
+  setCheckoutVisibility({ transfer: true });
+  writePaymentStage('Transferencia', 'payment');
+  setPaymentCloseWarning(false);
+  updateCheckoutProgress('payment');
+  if (scroll) smoothScrollTo(transferCheckout, 'start');
+}
+
+function showMercadoPagoStep({ scroll = true } = {}) {
+  const config = getMpLinkConfig(paymentDraft);
+  if (!config) {
+    setError(mpPaymentError, 'Mercado Pago no está disponible para esta experiencia.');
+    return;
+  }
+  if (mpCheckoutAmount) mpCheckoutAmount.textContent = formatArs(paymentDraft?.importe);
+  if (mpRedirectButton) mpRedirectButton.href = config.url;
+  if (mpReopenButton) mpReopenButton.href = config.url;
+  if (mpQrImage) mpQrImage.src = config.qr;
+  if (mpHybridOptions) mpHybridOptions.hidden = false;
+  setCheckoutVisibility({ mp: true });
+  writePaymentStage('MercadoPago', 'payment');
+  setPaymentCloseWarning(false);
+  updateCheckoutProgress('payment');
+  if (scroll) smoothScrollTo(mpCheckout, 'start');
+}
+
+function showMercadoPagoConfirmation({ scroll = true } = {}) {
+  const config = getMpLinkConfig(paymentDraft);
+  if (!config) return;
+  if (mpReopenButton) mpReopenButton.href = config.url;
+  setCheckoutVisibility({ mpConfirm: true });
+  writePaymentStage('MercadoPago', 'confirm');
+  setPaymentCloseWarning(true);
+  updateCheckoutProgress('payment');
+  if (scroll) smoothScrollTo(mpConfirmCheckout, 'start');
 }
 
 function renderPaymentSummary(data) {
@@ -417,106 +578,204 @@ function renderPaymentSummary(data) {
   `).join('');
 }
 
-function buildProofLinks(code, data) {
+function buildProofLinks(code, data, method = 'Transferencia') {
+  const isMp = method === 'MercadoPagoLink';
+  const methodName = isMp ? 'Mercado Pago' : 'transferencia';
+
   const whatsappText = [
-    'Hola ECIS. Realicé el pago correspondiente a mi inscripción.',
+    `Hola ECIS. Realicé el pago mediante ${methodName}.`,
     '',
     `Código de inscripción: ${code}`,
     `Experiencia: ${data.experiencia}`,
+    `Importe: ${formatArs(data.importe)}`,
     '',
-    'Adjunto el comprobante de transferencia.'
+    'Adjunto el comprobante de pago.'
   ].join('\n');
 
   const emailSubject = `Comprobante de pago — ${code}`;
   const emailBody = [
     'Hola ECIS:',
     '',
-    'Envío el comprobante correspondiente a mi inscripción.',
-    '',
+    `Realicé el pago mediante ${methodName}.`,
     `Código de inscripción: ${code}`,
     `Experiencia: ${data.experiencia}`,
+    `Importe: ${formatArs(data.importe)}`,
     `Nombre y apellido: ${getEnrollmentFullName(data)}`,
     '',
-    'Adjunto el comprobante de transferencia.',
+    'Adjunto el comprobante de pago.',
     '',
     'Saludos.'
   ].join('\n');
 
-  if (whatsappProof) {
-    whatsappProof.href = `https://wa.me/${ECIS_WHATSAPP}?text=${encodeURIComponent(whatsappText)}`;
-  }
-  if (emailProof) {
-    emailProof.href = `mailto:${ECIS_EMAIL}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
-  }
+  const whatsappHref = `https://wa.me/${ECIS_WHATSAPP}?text=${encodeURIComponent(whatsappText)}`;
+  const emailHref = `mailto:${ECIS_EMAIL}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+
+  if (whatsappProof) whatsappProof.href = whatsappHref;
+  if (emailProof) emailProof.href = emailHref;
 }
 
-function showFinishedState(code, data) {
+function showFinishedState(code, data, method = 'Transferencia') {
   if (!finishedPanel || !paymentFlow) return;
-  finalRegistrationCode.textContent = code;
-  buildProofLinks(code, data);
+  if (finalRegistrationCode) finalRegistrationCode.textContent = code;
+  buildProofLinks(code, data, method);
+  clearPaymentStage();
+  updateCheckoutProgress('proof');
   paymentFlow.hidden = true;
-  if (mpResultPanel) mpResultPanel.hidden = true;
   finishedPanel.hidden = false;
-  finishedPanel.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  smoothScrollTo(finishedPanel, 'start');
 }
 
-function showMpResultState({ code, status = 'verificando', message = '', detail = '' }) {
-  if (!mpResultPanel || !paymentFlow) return;
+function submitRegistrationThroughIframe(payload) {
+  if (!postForm || !postPayload) throw new Error('No se pudo preparar el registro.');
+  postForm.action = ECIS_ENDPOINT;
+  postForm.target = 'ecis-registration-frame';
+  postPayload.value = JSON.stringify(payload);
+  postForm.submit();
+}
 
-  const normalized = String(status || 'verificando').toLowerCase();
-  const presets = {
-    verificando: {
-      symbol: '…',
-      title: 'Verificando pago',
-      message: 'Estamos consultando el estado de la operación directamente con Mercado Pago.',
-      detail: 'La pantalla se actualizará cuando recibamos la respuesta.'
-    },
-    aprobado: {
-      symbol: '✓',
-      title: 'Pago aprobado',
-      message: 'Mercado Pago confirmó tu pago.',
-      detail: 'Tu inscripción quedó identificada con el código que aparece arriba. Guardalo como referencia.'
-    },
-    pendiente: {
-      symbol: '…',
-      title: 'Pago pendiente',
-      message: 'Mercado Pago todavía está procesando la operación.',
-      detail: 'No es necesario volver a pagar. Conservá tu código ECIS mientras el estado se actualiza.'
-    },
-    rechazado: {
-      symbol: '!',
-      title: 'El pago no se completó',
-      message: 'Mercado Pago informó que la operación no fue aprobada.',
-      detail: 'Podés volver a intentarlo y elegir nuevamente el medio de pago dentro de Mercado Pago.'
-    },
-    error: {
-      symbol: '!',
-      title: 'No pudimos verificar el pago',
-      message: 'No logramos consultar el estado final de la operación en este momento.',
-      detail: 'Conservá tu código ECIS. Podés reintentar la verificación recargando esta página o comunicarte con ECIS.'
+function consultarRegistroJsonp(registroId, timeoutMs = 12000) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `ecisRegistro_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const script = document.createElement('script');
+    let settled = false;
+
+    const cleanup = () => {
+      try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+      script.remove();
+    };
+
+    const timeout = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('La consulta del código está demorando.'));
+    }, timeoutMs);
+
+    window[callbackName] = data => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      cleanup();
+      resolve(data || { resultado: 'pendiente' });
+    };
+
+    script.onerror = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      cleanup();
+      reject(new Error('No se pudo consultar el código.'));
+    };
+
+    const separator = ECIS_ENDPOINT.includes('?') ? '&' : '?';
+    script.src = `${ECIS_ENDPOINT}${separator}accion=consultar_registro&registroId=${encodeURIComponent(registroId)}&callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
+    script.async = true;
+    document.head.appendChild(script);
+  });
+}
+
+async function esperarRegistroPorConsulta(registroId, totalMs = 90000) {
+  const startedAt = Date.now();
+  let ultimoError = null;
+
+  while (Date.now() - startedAt < totalMs) {
+    try {
+      const data = await consultarRegistroJsonp(registroId);
+      if (data?.resultado === 'ok' && data?.codigo) return data;
+      if (data?.resultado === 'error') {
+        throw new Error(data.mensaje || 'No pudimos recuperar el código de inscripción.');
+      }
+    } catch (error) {
+      ultimoError = error;
     }
-  };
 
-  const preset = presets[normalized] || presets.verificando;
-
-  if (mpResultCheck) {
-    mpResultCheck.textContent = preset.symbol;
-    mpResultCheck.dataset.status = normalized;
-  }
-  if (mpResultTitle) mpResultTitle.textContent = preset.title;
-  if (mpResultCode) mpResultCode.textContent = code || 'ECIS';
-  if (mpResultMessage) mpResultMessage.textContent = message || preset.message;
-  if (mpResultDetail) mpResultDetail.innerHTML = `<p>${escapeHtml(detail || preset.detail)}</p>`;
-
-  if (mpRetryPayment) {
-    const mostrarReintento = normalized === 'rechazado';
-    mpRetryPayment.hidden = !mostrarReintento;
-    mpRetryPayment.style.display = mostrarReintento ? '' : 'none';
+    await new Promise(resolve => window.setTimeout(resolve, 1400));
   }
 
-  paymentFlow.hidden = true;
-  if (finishedPanel) finishedPanel.hidden = true;
-  mpResultPanel.hidden = false;
+  throw ultimoError || new Error('La inscripción se registró, pero todavía no pudimos recuperar el código. Actualizá la página para intentarlo nuevamente.');
+}
+
+function postRegistrationAndWait(payload) {
+  if (registrationPostPromise) return registrationPostPromise;
+
+  registrationPostPromise = new Promise((resolve, reject) => {
+    let settled = false;
+
+    const finish = (handler, value) => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener('message', onMessage);
+      handler(value);
+    };
+
+    const onMessage = event => {
+      const data = event?.data;
+      if (!data || data.source !== 'ecis-registration') return;
+      if (String(data.registroId || '') !== String(payload.registroId || '')) return;
+
+      if (data.resultado === 'ok' && data.codigo) {
+        finish(resolve, data);
+        return;
+      }
+
+      if (data.resultado === 'error') {
+        finish(reject, new Error(data.mensaje || 'No pudimos registrar la inscripción.'));
+      }
+    };
+
+    window.addEventListener('message', onMessage);
+
+    try {
+      submitRegistrationThroughIframe(payload);
+    } catch (error) {
+      finish(reject, error);
+      return;
+    }
+
+    // Respaldo robusto: aunque el iframe termine en Apps Script y el navegador
+    // no reciba el postMessage, consultamos el registro por su UUID hasta
+    // recuperar el mismo código ya guardado en la planilla.
+    esperarRegistroPorConsulta(payload.registroId)
+      .then(data => finish(resolve, data))
+      .catch(error => finish(reject, error));
+  }).finally(() => {
+    registrationPostPromise = null;
+  });
+
+  return registrationPostPromise;
+}
+
+function getPreviousResultForDraft() {
+  const previous = readJsonStorage(ECIS_RESULT_KEY);
+  if (!previous || !paymentDraft) return null;
+  if (previous.experienciaId !== paymentDraft.experienciaId) return null;
+  if (previous.email !== paymentDraft.email) return null;
+  return previous;
+}
+
+function configureMpAvailability() {
+  const mpInput = paymentMethodInputs.find(input => input.value === 'MercadoPago');
+  if (!mpInput || !paymentDraft) return;
+
+  const config = getMpLinkConfig(paymentDraft);
+  const methodCard = mpInput.closest('.payment-method');
+  const helper = methodCard?.querySelector('small');
+
+  if (!config) {
+    mpInput.disabled = true;
+    methodCard?.classList.add('is-disabled');
+    if (helper) helper.textContent = 'No disponible para esta experiencia';
+    if (mpInput.checked) {
+      const transferInput = paymentMethodInputs.find(input => input.value === 'Transferencia');
+      if (transferInput) transferInput.checked = true;
+    }
+    return;
+  }
+
+  mpInput.disabled = false;
+  methodCard?.classList.remove('is-disabled');
+  if (helper) helper.textContent = 'App de Mercado Pago, crédito, débito y medios disponibles';
+  if (mpQrImage) mpQrImage.src = config.qr;
 }
 
 function updatePaymentMethodSelection() {
@@ -532,557 +791,101 @@ function updatePaymentMethodSelection() {
   }
 }
 
-function submitRegistrationThroughIframe(data) {
-  if (!postForm || !postPayload) throw new Error('No se pudo preparar el registro.');
-  postForm.action = ECIS_ENDPOINT;
-  postForm.target = 'ecis-registration-frame';
-  postPayload.value = JSON.stringify(data);
-  postForm.submit();
+function showMercadoPagoOptions() {
+  showMercadoPagoStep();
 }
 
-function reserveRegistrationCodeJsonp(timeoutMs = 30000) {
-  return new Promise((resolve, reject) => {
-    const callbackName = `ecisCode_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const script = document.createElement('script');
-    let settled = false;
-
-    const cleanup = () => {
-      try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
-      script.remove();
-    };
-
-    const timeout = window.setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      reject(new Error('La generación del código está demorando más de lo esperado.'));
-    }, timeoutMs);
-
-    window[callbackName] = data => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      cleanup();
-
-      if (!data || data.resultado !== 'ok' || !data.codigo) {
-        reject(new Error(data?.mensaje || 'No pudimos generar el código de inscripción.'));
-        return;
-      }
-
-      resolve(String(data.codigo));
-    };
-
-    script.onerror = () => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      cleanup();
-      reject(new Error('No pudimos comunicarnos con el sistema de inscripción.'));
-    };
-
-    const separator = ECIS_ENDPOINT.includes('?') ? '&' : '?';
-    script.src = `${ECIS_ENDPOINT}${separator}accion=reservar_codigo&callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
-    script.async = true;
-    document.head.appendChild(script);
-  });
-}
-
-async function ensureRegistrationCode() {
-  if (reservedRegistrationCode) return reservedRegistrationCode;
-
-  const storedOrder = readJsonStorage(ECIS_MP_ORDER_KEY);
-  if (storedOrder?.codigo && /^ECIS-\d{4,}$/.test(storedOrder.codigo)) {
-    reservedRegistrationCode = storedOrder.codigo;
-    if (mpReservedCode) mpReservedCode.textContent = reservedRegistrationCode;
-    return reservedRegistrationCode;
-  }
-
-  if (!registrationCodePromise) {
-    registrationCodePromise = reserveRegistrationCodeJsonp()
-      .then(code => {
-        reservedRegistrationCode = code;
-        if (mpReservedCode) mpReservedCode.textContent = code;
-        return code;
-      })
-      .finally(() => {
-        registrationCodePromise = null;
-      });
-  }
-
-  return registrationCodePromise;
-}
-
-function createUuid() {
-  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => {
-    const random = Math.random() * 16 | 0;
-    const value = char === 'x' ? random : (random & 0x3 | 0x8);
-    return value.toString(16);
-  });
-}
-
-function getOrCreateMpAttemptId() {
-  try {
-    const existing = sessionStorage.getItem(ECIS_MP_ATTEMPT_KEY);
-    if (existing) return existing;
-    const created = createUuid();
-    sessionStorage.setItem(ECIS_MP_ATTEMPT_KEY, created);
-    return created;
-  } catch (_) {
-    return createUuid();
-  }
-}
-
-function clearMpAttemptId() {
-  try { sessionStorage.removeItem(ECIS_MP_ATTEMPT_KEY); } catch (_) {}
-}
-
-function getReturnBaseUrl() {
-  const url = new URL(window.location.href);
-  url.search = '';
-  url.hash = '';
-  return url.href;
-}
-
-function consultarCheckoutIntentoJsonp(intentoId, timeoutMs = 18000) {
-  return new Promise((resolve, reject) => {
-    const callbackName = `ecisMpIntento_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const script = document.createElement('script');
-    let settled = false;
-
-    const cleanup = () => {
-      try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
-      script.remove();
-    };
-
-    const timeout = window.setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      reject(new Error('La consulta del checkout está demorando más de lo esperado.'));
-    }, timeoutMs);
-
-    window[callbackName] = data => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      cleanup();
-      resolve(data || null);
-    };
-
-    script.onerror = () => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      cleanup();
-      reject(new Error('No pudimos consultar la preparación de Mercado Pago.'));
-    };
-
-    const separator = ECIS_ENDPOINT.includes('?') ? '&' : '?';
-    script.src = `${ECIS_ENDPOINT}${separator}accion=consultar_checkout_intento&intentoId=${encodeURIComponent(intentoId)}&callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
-    script.async = true;
-    document.head.appendChild(script);
-  });
-}
-
-async function esperarResultadoCheckoutIntento(intentoId, timeoutMs = 60000) {
-  const startedAt = Date.now();
-  let ultimoErrorTransitorio = null;
-
-  while (Date.now() - startedAt < timeoutMs) {
-    try {
-      const result = await consultarCheckoutIntentoJsonp(intentoId, 18000);
-
-      if (result?.resultado === 'redirect' && result.checkoutUrl) return result;
-      if (result?.resultado === 'error') {
-        throw new Error(result.mensaje || 'No pudimos preparar el checkout de Mercado Pago.');
-      }
-
-      ultimoErrorTransitorio = null;
-    } catch (error) {
-      const mensaje = String(error?.message || '');
-
-      // Una consulta individual puede demorarse por un arranque en frío de
-      // Apps Script. Eso no significa que haya fallado la creación del checkout.
-      // Reintentamos hasta agotar el tiempo global en vez de cancelar al primer
-      // timeout de red.
-      if (
-        mensaje.includes('demorando más de lo esperado') ||
-        mensaje.includes('No pudimos consultar la preparación de Mercado Pago')
-      ) {
-        ultimoErrorTransitorio = error;
-      } else {
-        throw error;
-      }
-    }
-
-    await new Promise(resolve => window.setTimeout(resolve, 900));
-  }
-
-  throw new Error(
-    ultimoErrorTransitorio?.message ||
-    'Mercado Pago está demorando más de lo esperado. Podés volver a intentar sin riesgo de duplicar el cobro.'
-  );
-}
-
-async function submitCheckoutProThroughIframe(payload) {
-  if (checkoutProWaiter) {
-    throw new Error('Ya estamos preparando Mercado Pago. Esperá unos segundos.');
-  }
-
-  checkoutProWaiter = true;
-
-  try {
-    submitRegistrationThroughIframe(payload);
-    return await esperarResultadoCheckoutIntento(payload.intentoId);
-  } finally {
-    checkoutProWaiter = null;
-  }
-}
-
-function consultarOrdenMercadoPagoJsonp(codigo, orderId, retorno = '', timeoutMs = 20000) {
-  return new Promise((resolve, reject) => {
-    if (!codigo || !orderId) {
-      reject(new Error('No encontramos los datos necesarios para verificar la operación.'));
-      return;
-    }
-
-    const callbackName = `ecisMpVerify_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const script = document.createElement('script');
-    let settled = false;
-
-    const cleanup = () => {
-      try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
-      script.remove();
-    };
-
-    const timeout = window.setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      reject(new Error('La verificación está demorando más de lo esperado.'));
-    }, timeoutMs);
-
-    window[callbackName] = data => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      cleanup();
-      resolve(data || null);
-    };
-
-    script.onerror = () => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      cleanup();
-      reject(new Error('No pudimos consultar Mercado Pago.'));
-    };
-
-    const separator = ECIS_ENDPOINT.includes('?') ? '&' : '?';
-    script.src = `${ECIS_ENDPOINT}${separator}accion=verificar_checkout_mp&codigo=${encodeURIComponent(codigo)}&orderId=${encodeURIComponent(orderId)}&retorno=${encodeURIComponent(retorno)}&callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
-    script.async = true;
-    document.head.appendChild(script);
-  });
-}
-
-function consultarOrdenMercadoPagoPorCodigoJsonp(codigo, retorno = '', timeoutMs = 20000) {
-  return new Promise((resolve, reject) => {
-    if (!codigo) {
-      reject(new Error('No encontramos el código ECIS necesario para verificar la operación.'));
-      return;
-    }
-
-    const callbackName = `ecisMpVerifyCode_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const script = document.createElement('script');
-    let settled = false;
-
-    const cleanup = () => {
-      try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
-      script.remove();
-    };
-
-    const timeout = window.setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      reject(new Error('La verificación está demorando más de lo esperado.'));
-    }, timeoutMs);
-
-    window[callbackName] = data => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      cleanup();
-      resolve(data || null);
-    };
-
-    script.onerror = () => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      cleanup();
-      reject(new Error('No pudimos consultar Mercado Pago.'));
-    };
-
-    const separator = ECIS_ENDPOINT.includes('?') ? '&' : '?';
-    script.src = `${ECIS_ENDPOINT}${separator}accion=verificar_checkout_codigo&codigo=${encodeURIComponent(codigo)}&retorno=${encodeURIComponent(retorno)}&callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
-    script.async = true;
-    document.head.appendChild(script);
-  });
-}
-
-function consultarEstadoPagoJsonp(codigo, timeoutMs = 12000) {
-  return new Promise((resolve, reject) => {
-    if (!codigo) {
-      reject(new Error('No encontramos el código ECIS necesario para verificar el pago.'));
-      return;
-    }
-
-    const callbackName = `ecisPago_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const script = document.createElement('script');
-    let settled = false;
-
-    const cleanup = () => {
-      try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
-      script.remove();
-    };
-
-    const timeout = window.setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      reject(new Error('La consulta del estado está demorando más de lo esperado.'));
-    }, timeoutMs);
-
-    window[callbackName] = data => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      cleanup();
-      resolve(data || null);
-    };
-
-    script.onerror = () => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      cleanup();
-      reject(new Error('No pudimos consultar el estado de la inscripción.'));
-    };
-
-    const separator = ECIS_ENDPOINT.includes('?') ? '&' : '?';
-    script.src = `${ECIS_ENDPOINT}${separator}accion=consultar_pago&codigo=${encodeURIComponent(codigo)}&callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
-    script.async = true;
-    document.head.appendChild(script);
-  });
-}
-
-async function esperarConfirmacionMercadoPago(codigo, timeoutMs = 45000) {
-  const startedAt = Date.now();
-  let ultimo = null;
-
-  while (Date.now() - startedAt < timeoutMs) {
-    ultimo = await consultarEstadoPagoJsonp(codigo);
-
-    if (ultimo?.resultado === 'ok' && ultimo?.encontrado) {
-      const estado = String(ultimo.estadoPago || '').toLowerCase();
-
-      if (estado.includes('aprobado por mercado pago')) {
-        return { estado: 'aprobado', datos: ultimo };
-      }
-
-      if (
-        estado.includes('no aprobado por mercado pago') ||
-        estado.includes('rechazado')
-      ) {
-        return { estado: 'rechazado', datos: ultimo };
-      }
-    }
-
-    await new Promise(resolve => window.setTimeout(resolve, 1200));
-  }
-
-  return { estado: 'pendiente', datos: ultimo };
-}
-
-function extraerReferenciasMp(observaciones) {
-  const texto = String(observaciones || '');
-  const orderMatch = texto.match(/Order ID MP:\s*([A-Za-z0-9_-]+)/i);
-  const paymentMatch = texto.match(/N\.\s*º?\s*operación MP:\s*([A-Za-z0-9_-]+)/i);
-
-  return {
-    orderId: orderMatch ? orderMatch[1] : '',
-    paymentId: paymentMatch ? paymentMatch[1] : ''
-  };
-}
-
-function getMpReturnInfo() {
-  const params = new URLSearchParams(window.location.search);
-  const explicitResult = params.get('mp_result');
-  const hasMpParams = explicitResult || params.get('order_id') || params.get('external_reference') || params.get('payment_id');
-  if (!hasMpParams) return null;
-
-  const stored = readJsonStorage(ECIS_MP_ORDER_KEY) || {};
-
-  return {
-    routeResult: explicitResult || params.get('status') || params.get('collection_status') || '',
-    codigo: params.get('external_reference') || params.get('codigo') || stored.codigo || reservedRegistrationCode || '',
-    orderId: params.get('order_id') || stored.orderId || '',
-    paymentId: params.get('payment_id') || params.get('collection_id') || '',
-    status: params.get('status') || params.get('collection_status') || ''
-  };
-}
-
-async function verifyReturnedMercadoPagoPayment(info) {
-  const code = info?.codigo || '';
-
-  showMpResultState({ code, status: 'verificando' });
-
-  if (!code) {
-    showMpResultState({
-      code,
-      status: 'error',
-      detail: 'Mercado Pago nos devolvió a ECIS sin el código necesario para identificar la inscripción.'
-    });
+async function registerPaidEnrollment(action, methodKey, methodLabel, button, errorElement) {
+  if (!paymentDraft || !button) return;
+  setError(errorElement, '');
+
+  const previous = getPreviousResultForDraft();
+  if (previous?.medioPago === methodKey && previous?.codigo) {
+    showFinishedState(previous.codigo, paymentDraft, methodKey);
     return;
   }
 
-  const guardarAprobado = (datos = {}) => {
-    const refs = extraerReferenciasMp(datos.observaciones || '');
-
-    showMpResultState({
-      code,
-      status: 'aprobado',
-      message: 'Mercado Pago confirmó tu pago.',
-      detail: 'La operación fue validada por ECIS directamente con Mercado Pago.'
-    });
-
-    writeJsonStorage(ECIS_MP_ORDER_KEY, {
-      codigo: code,
-      orderId: datos.orderId || refs.orderId || info?.orderId || '',
-      paymentId: datos.paymentId || refs.paymentId || info?.paymentId || '',
-      resultado: 'aprobado',
-      experienciaId: paymentDraft?.experienciaId || '',
-      email: paymentDraft?.email || ''
-    });
-
-    writeJsonStorage(ECIS_RESULT_KEY, {
-      codigo: code,
-      experienciaId: paymentDraft?.experienciaId || '',
-      email: paymentDraft?.email || '',
-      medioPago: 'MercadoPago',
-      resultado: 'aprobado',
-      orderId: datos.orderId || refs.orderId || info?.orderId || ''
-    });
-
-    clearMpAttemptId();
-  };
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Generando código…';
 
   try {
-    // 1) Si el Webhook ya actualizó la planilla, resolvemos inmediatamente.
-    try {
-      const estadoActual = await consultarEstadoPagoJsonp(code, 12000);
+    const registroId = getRegistrationAttemptId(methodKey);
+    const payload = {
+      accion: action,
+      registroId,
+      nombre: paymentDraft.nombre,
+      apellido: paymentDraft.apellido || '',
+      dni: paymentDraft.dni,
+      email: paymentDraft.email,
+      telefono: paymentDraft.telefono,
+      institucion: paymentDraft.institucion || '',
+      experienciaId: paymentDraft.experienciaId
+    };
 
-      if (estadoActual?.resultado === 'ok' && estadoActual?.encontrado) {
-        const estadoPago = String(estadoActual.estadoPago || '').toLowerCase();
+    const response = await postRegistrationAndWait(payload);
+    const codigo = String(response?.codigo || '').trim();
+    if (!codigo) throw new Error('La inscripción se registró sin devolver un código. Contactá a ECIS.');
 
-        if (estadoPago.includes('aprobado por mercado pago')) {
-          guardarAprobado(estadoActual);
-          return;
-        }
-
-        if (
-          estadoPago.includes('no aprobado por mercado pago') ||
-          estadoPago.includes('rechazado')
-        ) {
-          showMpResultState({ code, status: 'rechazado' });
-          clearMpAttemptId();
-          return;
-        }
-      }
-    } catch (_) {
-      // Si esta consulta se demora, pasamos a la verificación directa.
-    }
-
-    // 2) No dependemos del Webhook para mostrar el resultado al participante.
-    // Apps Script recupera la Order ID guardada para este código, consulta
-    // directamente a Mercado Pago y actualiza la fila correspondiente.
-    try {
-      const verificacionDirecta = await consultarOrdenMercadoPagoPorCodigoJsonp(
-        code,
-        info?.routeResult || info?.status || '',
-        25000
-      );
-
-      if (verificacionDirecta?.resultado === 'aprobado') {
-        guardarAprobado(verificacionDirecta);
-        return;
-      }
-
-      if (verificacionDirecta?.resultado === 'rechazado') {
-        showMpResultState({
-          code,
-          status: 'rechazado',
-          message: verificacionDirecta.mensaje || '',
-          detail: verificacionDirecta.detalle || ''
-        });
-        clearMpAttemptId();
-        return;
-      }
-    } catch (_) {
-      // Si Google demora la respuesta, usamos como respaldo el estado de la hoja.
-    }
-
-    // 3) Respaldo final: esperamos la actualización del Webhook.
-    const verificacion = await esperarConfirmacionMercadoPago(code, 30000);
-    const datos = verificacion?.datos || {};
-
-    if (verificacion.estado === 'aprobado') {
-      guardarAprobado(datos);
-      return;
-    }
-
-    if (verificacion.estado === 'rechazado') {
-      showMpResultState({ code, status: 'rechazado' });
-      clearMpAttemptId();
-      return;
-    }
-
-    showMpResultState({
-      code,
-      status: 'pendiente',
-      message: 'Todavía estamos esperando la confirmación final de Mercado Pago.',
-      detail: 'No realices un segundo pago. Conservá tu código ECIS; la operación puede actualizarse automáticamente.'
+    writeJsonStorage(ECIS_RESULT_KEY, {
+      codigo,
+      experienciaId: paymentDraft.experienciaId,
+      email: paymentDraft.email,
+      medioPago: methodKey,
+      resultado: 'pendiente'
     });
 
-  } catch (_) {
-    showMpResultState({
-      code,
-      status: 'pendiente',
-      message: 'Todavía estamos esperando la confirmación final de Mercado Pago.',
-      detail: 'No realices un segundo pago. Conservá tu código ECIS; la operación puede actualizarse automáticamente.'
-    });
+    showFinishedState(codigo, paymentDraft, methodKey);
+  } catch (error) {
+    setError(errorElement, error?.message || `No pudimos registrar tu pago por ${methodLabel}. Intentá nuevamente.`);
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
   }
 }
 
-function initializePaymentPage() {
+async function recuperarRegistroPendienteAlCargar() {
+  if (!paymentDraft) return false;
+
+  const candidates = [
+    ['Transferencia', 'Transferencia'],
+    ['MercadoPagoLink', 'MercadoPagoLink']
+  ];
+
+  for (const [suffix, methodKey] of candidates) {
+    const storageKey = ECIS_REGISTRATION_ATTEMPT_PREFIX + suffix.toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
+    let registroId = '';
+    try {
+      registroId = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey) || '';
+      if (registroId && !localStorage.getItem(storageKey)) localStorage.setItem(storageKey, registroId);
+    } catch (_) {}
+    if (!registroId) continue;
+
+    try {
+      const data = await consultarRegistroJsonp(registroId, 8000);
+      if (data?.resultado === 'ok' && data?.codigo) {
+        const codigo = String(data.codigo).trim();
+        writeJsonStorage(ECIS_RESULT_KEY, {
+          codigo,
+          experienciaId: paymentDraft.experienciaId,
+          email: paymentDraft.email,
+          medioPago: methodKey,
+          resultado: 'pendiente'
+        });
+        showFinishedState(codigo, paymentDraft, methodKey);
+        return true;
+      }
+    } catch (_) {}
+  }
+
+  return false;
+}
+
+async function initializePaymentPage() {
   if (!paymentSummary) return;
 
   paymentDraft = readJsonStorage(ECIS_STORAGE_KEY);
-  const mpReturn = getMpReturnInfo();
-
-  if (!paymentDraft || !paymentDraft.experienciaId) {
-    if (mpReturn?.codigo) {
-      showMpResultState({
-        code: mpReturn.codigo,
-        status: 'error',
-        detail: 'Volviste desde Mercado Pago, pero esta pestaña ya no conserva los datos originales de la inscripción.'
-      });
-      verifyReturnedMercadoPagoPayment(mpReturn);
-      return;
-    }
-
+  if (!paymentDraft?.experienciaId) {
     window.location.replace('inscripcion.html');
     return;
   }
@@ -1092,180 +895,70 @@ function initializePaymentPage() {
   if (transferAmount) transferAmount.textContent = formatArs(paymentDraft.importe);
   if (mpCheckoutAmount) mpCheckoutAmount.textContent = formatArs(paymentDraft.importe);
 
-  if (mpReturn) {
-    if (mpReturn.codigo) reservedRegistrationCode = mpReturn.codigo;
-    verifyReturnedMercadoPagoPayment(mpReturn);
+  configureMpAvailability();
+
+  const previous = getPreviousResultForDraft();
+  if (previous?.codigo) {
+    showFinishedState(previous.codigo, paymentDraft, previous.medioPago || 'Transferencia');
     return;
   }
 
-  const previousResult = readJsonStorage(ECIS_RESULT_KEY);
-  if (
-    previousResult?.codigo &&
-    previousResult?.experienciaId === paymentDraft.experienciaId &&
-    previousResult?.email === paymentDraft.email
-  ) {
-    if (previousResult.medioPago === 'MercadoPago' && previousResult.resultado === 'aprobado') {
-      showMpResultState({ code: previousResult.codigo, status: 'aprobado' });
-    } else {
-      showFinishedState(previousResult.codigo, paymentDraft);
-    }
+  if (await recuperarRegistroPendienteAlCargar()) return;
+
+  updatePaymentMethodSelection();
+  updateCheckoutProgress('payment');
+
+  const stage = readPaymentStage();
+  if (stage?.method === 'Transferencia' && stage?.stage === 'payment') {
+    showTransferStep({ scroll: false });
+    return;
+  }
+  if (stage?.method === 'MercadoPago' && stage?.stage === 'confirm') {
+    showMercadoPagoConfirmation({ scroll: false });
+    return;
+  }
+  if (stage?.method === 'MercadoPago' && stage?.stage === 'payment') {
+    showMercadoPagoStep({ scroll: false });
     return;
   }
 
-  ensureRegistrationCode().catch(error => {
-    console.warn('ECIS: no se pudo reservar anticipadamente el código.', error);
-    if (mpReservedCode) mpReservedCode.textContent = 'Se generará al continuar';
-  });
+  setCheckoutVisibility({ choice: true });
 }
 
 paymentMethodInputs.forEach(input => {
   input.addEventListener('change', () => {
     updatePaymentMethodSelection();
-    if (transferCheckout) transferCheckout.hidden = true;
-    if (mpCheckout) mpCheckout.hidden = true;
     setError(paymentError, '');
     setError(mpPaymentError, '');
   });
 });
 
-updatePaymentMethodSelection();
-
-paymentProceed?.addEventListener('click', async () => {
+paymentProceed?.addEventListener('click', () => {
   const selected = paymentMethodInputs.find(input => input.checked)?.value || 'Transferencia';
-
+  setError(paymentError, '');
+  setError(mpPaymentError, '');
   if (selected === 'MercadoPago') {
-    if (transferCheckout) transferCheckout.hidden = true;
-    if (mpCheckout) mpCheckout.hidden = false;
-    setError(mpPaymentError, '');
-
-    if (mpCheckout) {
-      mpCheckout.scrollIntoView({
-        behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-        block: 'center'
-      });
-    }
-
-    try {
-      const code = await ensureRegistrationCode();
-      if (mpReservedCode) mpReservedCode.textContent = code;
-    } catch (error) {
-      if (mpReservedCode) mpReservedCode.textContent = 'No disponible';
-      setError(mpPaymentError, error?.message || 'No pudimos generar el código de inscripción.');
-    }
+    showMercadoPagoStep();
     return;
   }
-
-  if (mpCheckout) mpCheckout.hidden = true;
-  if (transferCheckout) {
-    transferCheckout.hidden = false;
-    transferCheckout.scrollIntoView({
-      behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-      block: 'center'
-    });
-  }
+  showTransferStep();
 });
 
-mpRedirectButton?.addEventListener('click', async () => {
-  if (!paymentDraft || !mpRedirectButton) return;
-
-  setError(mpPaymentError, '');
-  mpRedirectButton.disabled = true;
-  mpRedirectButton.setAttribute('aria-busy', 'true');
-
-  const originalText = mpRedirectButton.textContent;
-  mpRedirectButton.textContent = 'Abriendo Mercado Pago…';
-
-  if (mpWaitMessage) mpWaitMessage.hidden = false;
-
-  try {
-    const codigo = await ensureRegistrationCode();
-    const intentoId = getOrCreateMpAttemptId();
-
-    const payload = {
-      accion: 'mercadopago_checkout_pro',
-      codigo,
-      intentoId,
-      nombre: paymentDraft.nombre,
-      apellido: paymentDraft.apellido || '',
-      dni: paymentDraft.dni,
-      email: paymentDraft.email,
-      telefono: paymentDraft.telefono,
-      institucion: paymentDraft.institucion || '',
-      experienciaId: paymentDraft.experienciaId,
-      returnUrl: getReturnBaseUrl()
-    };
-
-    // Apps Script crea la Order en segundo plano dentro del iframe oculto.
-    // ECIS recupera checkout_url mediante el intentoId y recién entonces
-    // navega directamente desde pago.html hacia Mercado Pago.
-    const checkout = await submitCheckoutProThroughIframe(payload);
-
-    if (!checkout?.checkoutUrl || !/^https:\/\//i.test(checkout.checkoutUrl)) {
-      throw new Error('Mercado Pago no devolvió una URL de checkout válida.');
-    }
-
-    writeJsonStorage(ECIS_MP_ORDER_KEY, {
-      codigo,
-      orderId: checkout.orderId || '',
-      paymentId: '',
-      resultado: 'pendiente',
-      experienciaId: paymentDraft.experienciaId,
-      email: paymentDraft.email
-    });
-
-    window.location.assign(checkout.checkoutUrl);
-
-  } catch (error) {
-    mpRedirectButton.disabled = false;
-    mpRedirectButton.removeAttribute('aria-busy');
-    mpRedirectButton.textContent = originalText;
-
-    if (mpWaitMessage) mpWaitMessage.hidden = true;
-
-    setError(
-      mpPaymentError,
-      error?.message || 'No pudimos abrir Mercado Pago. Intentá nuevamente.'
-    );
-  }
+paymentBackButtons.forEach(button => {
+  button.addEventListener('click', () => showPaymentChoice());
 });
 
-mpRetryPayment?.addEventListener('click', () => {
-  // Un intento rechazado cierra ese código. El siguiente intento debe
-  // reservar un código ECIS nuevo.
-  clearMpAttemptId();
-  removeStorage(ECIS_RESULT_KEY);
-  removeStorage(ECIS_MP_ORDER_KEY);
-  reservedRegistrationCode = '';
-  registrationCodePromise = null;
+mpConfirmBack?.addEventListener('click', () => showMercadoPagoStep());
 
-  const cleanUrl = new URL(window.location.href);
-  cleanUrl.search = '';
-  cleanUrl.hash = '';
-  window.history.replaceState({}, '', cleanUrl.href);
+mpRedirectButton?.addEventListener('click', () => {
+  showMercadoPagoConfirmation({ scroll: true });
+});
 
-  if (mpResultPanel) mpResultPanel.hidden = true;
-  if (paymentFlow) paymentFlow.hidden = false;
-  if (finishedPanel) finishedPanel.hidden = true;
+mpQrContinue?.addEventListener('click', () => showMercadoPagoConfirmation());
 
-  paymentMethodInputs.forEach(input => {
-    input.checked = input.value === 'MercadoPago';
-  });
-  updatePaymentMethodSelection();
-
-  if (transferCheckout) transferCheckout.hidden = true;
-  if (mpCheckout) {
-    mpCheckout.hidden = false;
-    mpCheckout.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  ensureRegistrationCode()
-    .then(code => {
-      if (mpReservedCode) mpReservedCode.textContent = code;
-    })
-    .catch(error => {
-      if (mpReservedCode) mpReservedCode.textContent = 'No disponible';
-      setError(mpPaymentError, error?.message || 'No pudimos generar un nuevo código de inscripción.');
-    });
+mpReopenButton?.addEventListener('click', () => {
+  setPaymentCloseWarning(true);
+  writePaymentStage('MercadoPago', 'confirm');
 });
 
 copyTransferAlias?.addEventListener('click', async () => {
@@ -1279,75 +972,54 @@ copyTransferAlias?.addEventListener('click', async () => {
   }
 });
 
-async function copyCodeFromElement(element, button) {
-  const code = element?.textContent?.trim();
+copyRegistrationCode?.addEventListener('click', async () => {
+  const code = finalRegistrationCode?.textContent?.trim();
   if (!code) return;
 
   try {
     await navigator.clipboard.writeText(code);
-    const original = button?.textContent || 'Copiar código';
-    if (button) button.textContent = 'Código copiado';
-    window.setTimeout(() => {
-      if (button) button.textContent = original;
-    }, 1600);
+    const original = copyRegistrationCode.textContent || 'Copiar código';
+    copyRegistrationCode.textContent = 'Código copiado';
+    window.setTimeout(() => { copyRegistrationCode.textContent = original; }, 1600);
   } catch (_) {
     window.prompt('Copiá tu código:', code);
   }
-}
+});
 
-copyRegistrationCode?.addEventListener('click', () => copyCodeFromElement(finalRegistrationCode, copyRegistrationCode));
-copyMpResultCode?.addEventListener('click', () => copyCodeFromElement(mpResultCode, copyMpResultCode));
+transferDone?.addEventListener('click', () => {
+  registerPaidEnrollment(
+    'transferencia',
+    'Transferencia',
+    'transferencia',
+    transferDone,
+    paymentError
+  );
+});
 
-transferDone?.addEventListener('click', async () => {
-  if (!paymentDraft || !transferDone) return;
-  setError(paymentError, '');
+mpDone?.addEventListener('click', () => {
+  registerPaidEnrollment(
+    'mercadopago_link',
+    'MercadoPagoLink',
+    'Mercado Pago',
+    mpDone,
+    mpPaymentError
+  );
+});
 
-  const previous = readJsonStorage(ECIS_RESULT_KEY);
-  if (previous?.codigo && previous?.experienciaId === paymentDraft.experienciaId && previous?.email === paymentDraft.email &&
-      previous?.medioPago !== 'MercadoPago'
-  ) {
-    showFinishedState(previous.codigo, paymentDraft);
-    return;
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !paymentDraft) return;
+  const stage = readPaymentStage();
+  if (stage?.method === 'MercadoPago' && stage?.stage === 'confirm' && finishedPanel?.hidden !== false) {
+    showMercadoPagoConfirmation({ scroll: true });
   }
+});
 
-  transferDone.disabled = true;
-  transferDone.textContent = 'Generando código…';
-
-  try {
-    // Primero reservamos un código único. De esta forma la web puede mostrarlo
-    // sin depender de una confirmación automática del pago.
-    const codigo = await ensureRegistrationCode();
-
-    const payload = {
-      codigo,
-      nombre: paymentDraft.nombre,
-      apellido: paymentDraft.apellido || '',
-      dni: paymentDraft.dni,
-      email: paymentDraft.email,
-      telefono: paymentDraft.telefono,
-      institucion: paymentDraft.institucion || '',
-      experienciaId: paymentDraft.experienciaId,
-      medioPago: 'Transferencia'
-    };
-
-    submitRegistrationThroughIframe(payload);
-
-    const result = {
-      codigo,
-      experienciaId: paymentDraft.experienciaId,
-      email: paymentDraft.email,
-      medioPago: 'Transferencia',
-      resultado: 'pendiente'
-    };
-    writeJsonStorage(ECIS_RESULT_KEY, result);
-
-    // Mostramos inmediatamente las instrucciones para enviar código + comprobante.
-    // El estado del pago queda pendiente y ECIS lo confirma manualmente.
-    showFinishedState(codigo, paymentDraft);
-  } catch (error) {
-    transferDone.disabled = false;
-    transferDone.textContent = 'Ya realicé la transferencia →';
-    setError(paymentError, error?.message || 'No pudimos generar tu código de inscripción. Intentá nuevamente.');
+window.addEventListener('pageshow', () => {
+  if (!paymentDraft) return;
+  const stage = readPaymentStage();
+  if (stage?.method === 'MercadoPago' && stage?.stage === 'confirm' && finishedPanel?.hidden !== false) {
+    window.setTimeout(() => showMercadoPagoConfirmation({ scroll: true }), 80);
   }
 });
 

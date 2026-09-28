@@ -435,7 +435,7 @@ img{height:auto}
 .checkout-amount-row span{color:#7f746b;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
 .checkout-amount-row strong{font:400 36px/1 Georgia,"Times New Roman",serif;color:var(--burgundy)}
 
-.transfer-checkout[hidden],.mp-redirect-checkout[hidden],.checkout-success[hidden],.checkout-error[hidden]{display:none}
+.transfer-checkout[hidden],.mp-redirect-checkout[hidden],.mp-confirm-checkout[hidden],.checkout-payment-card[hidden],.checkout-success[hidden],.checkout-error[hidden]{display:none}
 .transfer-simple-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);background:#fcfaf7}
 .transfer-simple-grid>div{padding:16px 18px;border-bottom:1px solid var(--line)}
 .transfer-simple-grid>div:nth-child(odd){border-right:1px solid var(--line)}
@@ -453,11 +453,6 @@ img{height:auto}
 .mp-redirect-icon{display:grid;place-items:center;width:58px;height:58px;flex:0 0 58px;border-radius:50%;background:var(--burgundy);color:#fff;font-weight:800;letter-spacing:.03em;box-shadow:0 0 0 5px rgba(116,16,24,.08)}
 .mp-redirect-hero strong{display:block;color:#2b2521;font-size:16px}
 .mp-redirect-hero p{margin:6px 0 0;color:#756b63;font-size:12.5px;line-height:1.55}
-.mp-flow-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
-.mp-flow-steps>div{position:relative;padding:16px 14px 15px 46px;border:1px solid #e3dbd2;background:#fff}
-.mp-flow-steps span{position:absolute;left:14px;top:14px;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#f3e8e9;color:var(--burgundy);font-size:11px;font-weight:800}
-.mp-flow-steps strong{display:block;color:#403933;font-size:12px;line-height:1.35}
-.mp-flow-steps small{display:block;margin-top:5px;color:#8a8077;font-size:10.5px;line-height:1.45}
 .mp-checkout-summary{display:grid;grid-template-columns:1fr 1fr;margin-top:16px;border:1px solid var(--line);background:#fcfaf7}
 .mp-checkout-summary>div{padding:16px 18px}
 .mp-checkout-summary>div+div{border-left:1px solid var(--line)}
@@ -466,13 +461,7 @@ img{height:auto}
 .mp-checkout-summary>div:first-child strong{color:var(--burgundy);letter-spacing:.05em}
 .mp-redirect-button{margin-top:18px}
 .mp-redirect-small{margin:10px 0 0;color:#91867d;font-size:10.5px;text-align:center}
-.mp-wait-message{margin:14px 0;padding:12px 14px;border-left:3px solid var(--gold);background:#f7f2e8;color:#564b40;font-size:13px;line-height:1.55}
-.mp-wait-message[hidden]{display:none}
-.mp-redirect-button[aria-busy="true"]{cursor:wait;opacity:.78}
 
-.mp-result-panel .mp-result-check[data-status="pendiente"],.mp-result-panel .mp-result-check[data-status="verificando"]{background:#7f6a42}
-.mp-result-panel .mp-result-check[data-status="rechazado"],.mp-result-panel .mp-result-check[data-status="error"]{background:#7a252b}
-.mp-result-detail{text-align:center}
 
 .checkout-success{text-align:center;padding-top:44px;padding-bottom:44px}
 .success-check{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 18px;border-radius:50%;background:var(--burgundy);border:3px solid #ead6b3;color:#fff;font-size:26px}
@@ -494,7 +483,6 @@ img{height:auto}
   .checkout-intro-inner{align-items:flex-start;display:block}
   .checkout-progress{margin-top:24px}
   .payment-method-grid{grid-template-columns:1fr}
-  .mp-flow-steps{grid-template-columns:1fr}
 }
 
 @media(max-width:650px){
@@ -1165,3 +1153,267 @@ img{height:auto}
 }
 
 @media(max-width:620px){.main-nav{max-height:calc(100dvh - 72px)}}
+
+
+/* =========================================================
+   ECIS — Mercado Pago híbrido: Link + QR
+   ========================================================= */
+.mp-hybrid-layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:24px;align-items:stretch;margin:22px 0}.mp-hybrid-action,.mp-hybrid-qr{border:1px solid rgba(116,16,24,.16);border-radius:18px;padding:22px;background:#fff}.mp-hybrid-qr{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}.mp-hybrid-qr img{display:block;max-width:220px;width:100%;height:auto;border-radius:12px;background:#fff;padding:8px}.mp-hybrid-qr strong{font-size:1rem}.mp-hybrid-qr small{color:#6d6d73;line-height:1.45}.mp-after-payment{margin-top:20px;padding:18px;border-radius:16px;background:#f8f5f5;border:1px solid rgba(116,16,24,.12)}.mp-after-payment>strong{display:block;margin-bottom:6px}.mp-after-payment p{margin:0 0 14px;color:#555}.mp-after-payment .success-contact-actions{margin-top:0}.mp-hybrid-action .mp-redirect-button{margin-top:18px;width:100%}@media(max-width:760px){.mp-hybrid-layout{grid-template-columns:1fr}.mp-hybrid-qr{order:2}.mp-hybrid-qr img{max-width:190px}}
+
+/* =========================================================
+   ECIS 102 — refinamiento responsive para pantallas móviles
+   En celulares los banners dejan de funcionar como un fondo gigante:
+   la imagen se presenta como una franja visual compacta y el contenido
+   pasa debajo, con una jerarquía tipográfica más proporcionada.
+   ========================================================= */
+
+@media(max-width:700px){
+  :root{--mobile-hero-media:156px}
+
+  .container{width:calc(100% - 28px)}
+  .nav-wrap{min-height:68px;gap:16px}
+  .brand-mark{font-size:35px}
+  .brand-divider,.brand-name{display:none}
+  .main-nav{top:68px;max-height:calc(100dvh - 68px);padding:12px 16px 18px}
+  .main-nav a{padding:12px 8px}
+  .main-nav .nav-cta{margin-top:10px}
+
+  .eyebrow{margin-bottom:10px;font-size:10px;letter-spacing:.24em}
+  .display-title{font-size:38px;line-height:1.01;letter-spacing:-.038em}
+  .section-title{font-size:36px;line-height:1.03}
+  .lead{font-size:15px;line-height:1.55}
+  .hero-actions{margin-top:22px;gap:10px}
+  .hero-actions .button{width:100%}
+
+  /* Inicio */
+  .home-banner{
+    display:block;
+    min-height:0;
+    padding-top:var(--mobile-hero-media);
+    background-color:var(--paper);
+    background-size:auto var(--mobile-hero-media);
+    background-position:68% top;
+    background-repeat:no-repeat;
+  }
+  .home-banner::after{
+    inset:0 0 auto 0;
+    height:var(--mobile-hero-media);
+    background:linear-gradient(90deg,rgba(251,250,247,.12),rgba(251,250,247,.02) 55%,rgba(0,0,0,.06));
+  }
+  .home-banner-content{max-width:none;padding:24px 0 30px}
+  .home-banner-content .display-title{max-width:560px;font-size:38px}
+  .home-banner-content .lead{max-width:560px;margin-top:15px}
+
+  /* Banners internos */
+  .page-banner{
+    display:block;
+    min-height:0;
+    padding-top:var(--mobile-hero-media);
+    background-size:auto var(--mobile-hero-media);
+    background-repeat:no-repeat;
+  }
+  .page-banner .container{position:relative;z-index:3}
+  .page-banner-content{max-width:none;padding:24px 0 30px}
+  .page-banner-content .display-title{max-width:100%;font-size:36px;line-height:1.02}
+  .page-banner-content>p:not(.eyebrow):not(.lead),
+  .page-banner-content .about-subblock p:not(.eyebrow){font-size:14.5px;line-height:1.58}
+  .page-banner-content .lead{font-size:15px}
+
+  .page-banner-about{
+    background-color:#100b0c;
+    background-position:70% top;
+  }
+  .page-banner-about::before{
+    inset:0 0 auto 0;
+    height:var(--mobile-hero-media);
+    background:linear-gradient(90deg,rgba(10,9,9,.55) 0%,rgba(20,11,13,.30) 48%,rgba(10,10,10,.04) 100%);
+  }
+  .page-banner-about::after{
+    inset:0 0 auto 0;
+    height:var(--mobile-hero-media);
+    background:linear-gradient(90deg,rgba(107,23,27,.06),transparent 70%);
+  }
+  .about-banner-content .about-subblock{margin-top:18px;padding-top:17px}
+
+  .page-banner-experience{
+    background-color:var(--paper);
+    background-position:68% top;
+  }
+  .page-banner-experience::before{
+    inset:0 0 auto 0;
+    height:var(--mobile-hero-media);
+    background:linear-gradient(90deg,rgba(251,250,247,.14),rgba(251,250,247,0) 70%);
+  }
+
+  .page-banner-sources{
+    background-color:#0d0d0d;
+    background-position:67% top;
+  }
+  .page-banner-sources::before{
+    inset:0 0 auto 0;
+    height:var(--mobile-hero-media);
+    background:linear-gradient(90deg,rgba(8,8,8,.58) 0%,rgba(27,11,14,.32) 48%,rgba(8,8,8,.06) 100%);
+  }
+  .page-banner-sources::after{
+    inset:0 0 auto 0;
+    height:var(--mobile-hero-media);
+    background:linear-gradient(90deg,rgba(107,23,27,.08),transparent 72%);
+  }
+  .banner-quote{margin-top:18px!important;padding-top:16px;font-size:18px!important;line-height:1.3!important}
+
+  /* Contacto: misma lógica de franja visual + contenido debajo */
+  .contact-hero{
+    min-height:0;
+    padding-top:var(--mobile-hero-media);
+    background:#f9f6f0;
+  }
+  .contact-hero::after{
+    top:0;
+    right:0;
+    bottom:auto;
+    left:0;
+    width:100%;
+    height:var(--mobile-hero-media);
+    background-size:auto var(--mobile-hero-media);
+    background-position:68% center;
+    background-repeat:no-repeat;
+  }
+  .contact-hero::before{
+    inset:0 0 auto 0;
+    height:var(--mobile-hero-media);
+    background:linear-gradient(90deg,rgba(249,246,240,.18),rgba(249,246,240,0) 75%);
+  }
+  .contact-hero .container{padding-top:24px;padding-bottom:30px}
+  .contact-hero h1{font-size:38px;line-height:1.02}
+  .contact-hero .lead{margin-top:15px;font-size:15px}
+
+  /* Inicio y contenido editorial */
+  .home-values-grid{grid-template-columns:1fr}
+  .value-item,.value-item:first-child,.value-item:nth-child(3),.value-item:last-child{
+    min-height:0;
+    padding:22px 4px;
+    border-right:0;
+    border-bottom:1px solid var(--line);
+  }
+  .value-item:last-child{border-bottom:0}
+  .value-item h2{font-size:25px}
+  .value-item p{max-width:none;font-size:13px}
+  .value-letter{font-size:68px;top:4px}
+  .value-rule{margin-bottom:13px}
+  .home-experience{padding:44px 0 48px}
+  .home-experience-inner{grid-template-columns:1fr;gap:24px}
+  .home-experience h2{font-size:31px}
+  .home-experience .button{width:100%}
+
+  .team-section{padding-top:48px}
+  .team-header{margin-bottom:26px}
+  .profile-editorial-image{min-height:310px;max-height:380px}
+  .profile-editorial-copy{padding:27px 20px 30px}
+  .profile-editorial-copy h3{font-size:36px}
+  .profile-role{font-size:14px;margin-bottom:18px}
+  .profile-editorial-copy>p:not(.eyebrow):not(.profile-role){font-size:14px;line-height:1.58}
+  .profile-inline-quote{margin-top:20px;padding-top:18px}
+  .profile-inline-quote blockquote{font-size:22px}
+  .admin-band{padding:24px 0 30px;margin-top:28px}
+  .philosophy-band{padding:48px 0}
+  .philosophy-grid{gap:18px}
+  .philosophy-grid h2{font-size:30px}
+  .philosophy-grid blockquote{font-size:27px}
+
+  .formats-section{padding:44px 0 54px}
+  .formats-heading{margin-bottom:26px}
+  .formats-heading .section-title{font-size:35px}
+  .experience-card-image{height:154px}
+  .experience-card-icon{top:122px;width:60px;height:60px}
+  .experience-card-body{padding:44px 20px 22px}
+  .experience-card h3{font-size:26px}
+  .institution-band{padding:42px 0}
+  .institution-band h2{font-size:32px}
+
+  .masterclass-catalog{padding:44px 0 54px}
+  .masterclass-catalog-head{margin-bottom:26px}
+  .masterclass-catalog-head h1{font-size:38px;line-height:1.02}
+  .masterclass-catalog-head>p:last-child{font-size:15px;line-height:1.58}
+  .masterclass-course-image{height:190px}
+  .masterclass-course-body{padding:22px 20px 24px}
+  .masterclass-course-body h2{font-size:30px}
+
+  .coming-soon{padding:42px 0;min-height:55vh}
+  .coming-soon-card{padding:34px 20px}
+  .coming-soon-card h1{font-size:38px}
+  .coming-soon-card p{font-size:16px}
+
+  /* Fuentes */
+  .sources-reference-section{padding:46px 0 58px}
+  .sources-reference-intro{margin-bottom:32px;padding-bottom:22px}
+  .sources-reference-intro h2{font-size:35px}
+  .sources-reference-intro>p:last-child{margin-top:18px;padding-left:14px}
+  .source-reference-group,.source-reference-group-international{padding:24px 16px 26px}
+  .source-reference-card{min-height:0}
+  .source-reference-disclaimer{grid-template-columns:30px 1fr;padding:17px 15px}
+
+  /* Formularios e inscripción */
+  .checkout-intro-inner{padding-top:28px;padding-bottom:21px}
+  .checkout-intro h1{font-size:38px}
+  .checkout-intro p:not(.eyebrow){margin-top:10px;font-size:14px}
+  .checkout-progress{margin-top:18px}
+  .checkout-progress li+li::before{width:34px}
+  .checkout-section{padding:24px 0 48px}
+  .checkout-card{padding:22px 17px;border-radius:14px;box-shadow:0 10px 28px rgba(24,17,12,.06)}
+  .checkout-card+.checkout-card{margin-top:16px}
+  .checkout-card h2{font-size:30px}
+  .checkout-card-head{margin-bottom:20px}
+  .checkout-card-head p:not(.eyebrow){font-size:13.5px}
+  .checkout-form-grid{grid-template-columns:1fr;gap:16px}
+  .checkout-field-full{grid-column:1}
+  .checkout-field input,.checkout-field select{min-height:50px}
+  .checkout-primary{width:100%}
+  .payment-method-grid{grid-template-columns:1fr;gap:9px}
+  .payment-method{min-height:72px;padding:13px}
+  .checkout-amount-row{padding:18px 0}
+  .checkout-amount-row strong{font-size:30px}
+  .transfer-simple-grid{grid-template-columns:1fr}
+  .transfer-simple-grid>div,.transfer-simple-grid>div:nth-child(odd){border-right:0}
+
+  .mp-hybrid-layout{grid-template-columns:1fr;gap:14px;margin:16px 0}
+  .mp-hybrid-action{padding:17px;border-radius:14px}
+  .mp-redirect-hero{padding:16px;gap:13px}
+  .mp-redirect-icon{width:50px;height:50px;flex-basis:50px}
+  /* En un celular el QR ocupa espacio sin aportar valor: el botón abre el mismo link. */
+  .mp-hybrid-qr{display:none}
+  .mp-after-payment{padding:16px;border-radius:13px}
+  .mp-secure-note{font-size:12px}
+
+  .success-contact-actions{display:grid;grid-template-columns:1fr;gap:9px}
+  .success-contact-actions .button{width:100%}
+  .final-registration-code{font-size:22px;letter-spacing:.06em}
+
+  /* Contacto y pie */
+  .contact-section{padding-top:18px}
+  .contact-grid{gap:28px}
+  .contact-form{grid-template-columns:1fr}
+  .contact-form .full,.contact-form .button{grid-column:1}
+  .contact-form .button{width:100%}
+  .footer-main{padding:22px 0 18px}
+  .footer-grid{gap:18px}
+  .footer-social{gap:10px}
+  .footer-bottom .container{display:block}
+  .footer-bottom span{display:block;margin-top:6px}
+}
+
+@media(max-width:420px){
+  :root{--mobile-hero-media:144px}
+  .container{width:calc(100% - 22px)}
+  .display-title,.home-banner-content .display-title{font-size:35px}
+  .page-banner-content .display-title,.contact-hero h1,.masterclass-catalog-head h1{font-size:34px}
+  .section-title,.formats-heading .section-title{font-size:33px}
+  .checkout-intro h1{font-size:35px}
+  .checkout-card{padding:20px 14px}
+  .checkout-progress li+li::before{width:24px}
+  .checkout-progress li strong{font-size:10px}
+  .profile-editorial-image{min-height:280px}
+  .button{padding-left:17px;padding-right:17px}
+}
+
+/* ECIS 105 — pago guiado paso a paso */
+.checkout-step-back{display:block;margin:14px auto 0;padding:9px 12px;border:0;background:transparent;color:#776b62;font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px}.checkout-step-back:hover,.checkout-step-back:focus-visible{color:var(--burgundy)}.checkout-secondary-link{display:flex;justify-content:center;width:100%;margin-top:10px;text-decoration:none}.mp-guide-note{display:flex;gap:10px;align-items:flex-start;margin:16px 0 0;padding:14px 16px;border:1px solid rgba(116,16,24,.14);border-radius:12px;background:#fff7f7;color:#5e514d;font-size:12.5px;line-height:1.5}.mp-guide-note strong{color:var(--burgundy);white-space:nowrap}.mp-guide-note span{display:block}.mp-qr-continue{width:100%;margin-top:8px;min-height:42px;font-size:11.5px}.mp-confirm-panel{display:grid;grid-template-columns:54px 1fr;gap:16px;align-items:center;margin:18px 0 4px;padding:20px;border:1px solid rgba(116,16,24,.14);border-radius:16px;background:#fbf7f7}.mp-confirm-number{display:grid;place-items:center;width:54px;height:54px;border-radius:50%;background:var(--burgundy);color:#fff;font:700 22px/1 Arial,Helvetica,sans-serif;box-shadow:0 0 0 5px rgba(116,16,24,.07)}.mp-confirm-panel strong{display:block;color:#2f2925;font-size:15px}.mp-confirm-panel p{margin:6px 0 0;color:#6f655d;font-size:12.5px;line-height:1.55}@media(max-width:700px){.checkout-progress{width:100%;justify-content:space-between;gap:5px}.checkout-progress li{gap:5px;font-size:10px}.checkout-progress li+li::before{width:20px;margin-right:0}.checkout-progress li span{width:28px;height:28px}.mp-guide-note{display:block;padding:13px 14px}.mp-guide-note strong{display:block;margin-bottom:4px;white-space:normal}.mp-confirm-panel{grid-template-columns:44px 1fr;gap:12px;padding:16px 14px;border-radius:13px}.mp-confirm-number{width:44px;height:44px;font-size:18px}.checkout-secondary-link{min-height:46px}}@media(max-width:420px){.checkout-progress li strong{font-size:9px}.checkout-progress li+li::before{width:12px}.checkout-progress li span{width:26px;height:26px;font-size:11px}.mp-confirm-panel{grid-template-columns:1fr;text-align:center}.mp-confirm-number{margin:0 auto}}
