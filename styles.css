@@ -1606,3 +1606,86 @@ body.is-ready .home-banner-content>*:nth-child(4){animation-delay:.18s}
 @media(prefers-reduced-motion:reduce){
   .network-status,.button::after,.ecis-card-glow{transition:none!important}
 }
+
+/* =========================================================
+   ECIS 119 — filtros responsivos de banners
+   El filtro existe solo cuando el texto se superpone a la imagen.
+   En celular, la fotografía queda completamente limpia y el texto
+   continúa debajo del banner según la composición responsive.
+   ========================================================= */
+
+@media (min-width:701px){
+  /* Claros: marfil + dorado muy suave -> transparente */
+  .home-banner::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    z-index:1;
+    pointer-events:none;
+    background:linear-gradient(90deg,
+      rgba(250,248,243,.94) 0%,
+      rgba(248,241,224,.84) 22%,
+      rgba(239,218,174,.56) 40%,
+      rgba(250,247,239,.24) 57%,
+      rgba(250,247,239,.06) 70%,
+      rgba(250,247,239,0) 80%);
+  }
+
+  .page-banner-experience::before{
+    background:linear-gradient(90deg,
+      rgba(250,248,243,.94) 0%,
+      rgba(248,241,224,.84) 22%,
+      rgba(239,218,174,.54) 40%,
+      rgba(250,247,239,.22) 57%,
+      rgba(250,247,239,.05) 70%,
+      rgba(250,247,239,0) 80%);
+  }
+  .page-banner-experience::after{display:none}
+
+  .contact-hero::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    z-index:1;
+    pointer-events:none;
+    background:linear-gradient(90deg,
+      rgba(250,248,243,.94) 0%,
+      rgba(248,241,224,.84) 22%,
+      rgba(239,218,174,.54) 40%,
+      rgba(250,247,239,.22) 57%,
+      rgba(250,247,239,.05) 70%,
+      rgba(250,247,239,0) 80%);
+  }
+
+  /* Oscuros: bordó profundo + negro -> transparente */
+  .page-banner-about::before,
+  .page-banner-sources::before{
+    background:linear-gradient(90deg,
+      rgba(12,7,8,.96) 0%,
+      rgba(48,8,14,.90) 22%,
+      rgba(93,17,25,.72) 40%,
+      rgba(35,11,15,.42) 57%,
+      rgba(10,8,9,.13) 70%,
+      rgba(10,8,9,0) 80%);
+  }
+
+  .page-banner-about::after,
+  .page-banner-sources::after{
+    display:none;
+  }
+}
+
+@media (max-width:700px){
+  /* La imagen se muestra sola: sin filtros ni velos encima. */
+  .home-banner::after,
+  .page-banner-about::before,
+  .page-banner-about::after,
+  .page-banner-experience::before,
+  .page-banner-experience::after,
+  .page-banner-sources::before,
+  .page-banner-sources::after,
+  .contact-hero::before{
+    display:none !important;
+    background:none !important;
+  }
+}
