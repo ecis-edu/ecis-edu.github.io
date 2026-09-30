@@ -1761,3 +1761,12 @@ body.is-ready .home-banner-content>*:nth-child(4){animation-delay:.18s}
     background-repeat:no-repeat !important;
   }
 }
+
+/* ECIS 122 — ajuste puntual del encuadre del banner de Contacto.
+   Solo escritorio: se muestra un poco más de la parte inferior de la imagen. */
+@media (min-width:701px){
+  .contact-hero::after{
+    background-size:cover !important;
+    background-position:center 70% !important;
+  }
+}
