@@ -151,7 +151,7 @@ button,input,textarea,select{font:inherit;font-size:16px}
 
 
 /* Contact */
-.contact-hero{position:relative;overflow:hidden;background:#f9f6f0;min-height:415px}.contact-hero::after{content:"";position:absolute;right:0;top:0;bottom:0;width:100%;background:url("assets/images/contacto-banner.webp") center/cover no-repeat}
+.contact-hero{position:relative;overflow:hidden;background:#f9f6f0;min-height:415px}.contact-hero::after{content:"";position:absolute;right:0;top:0;bottom:0;width:100%;background:url("assets/images/contacto-banner.webp") 50% 72%/cover no-repeat}
 .contact-hero .container{position:relative;z-index:3;padding-top:62px;padding-bottom:58px}.contact-hero h1{margin:0;font:400 clamp(52px,5vw,78px)/.98 Georgia,serif;letter-spacing:-.04em}.contact-hero h1 span{display:block;color:var(--burgundy)}.contact-hero .lead{max-width:530px}
 .contact-section{padding:36px 0 58px;background:#fff}.contact-grid{display:grid;grid-template-columns:.38fr .62fr;gap:0;border-top:1px solid var(--line)}
 .contact-info{padding:30px 46px 20px 0;border-right:1px solid var(--line)}.contact-form-wrap{padding:30px 0 20px 54px}
@@ -1690,83 +1690,10 @@ body.is-ready .home-banner-content>*:nth-child(4){animation-delay:.18s}
   }
 }
 
-/* =========================================================
-   ECIS 120 — banners con imagen completa
-   Todas las imágenes de banner comparten proporción 2079 × 756 (2.75:1).
-   Escritorio: el banner adopta esa proporción y el texto queda superpuesto.
-   Celular: la imagen completa ocupa una franja superior y el texto continúa debajo.
-   ========================================================= */
 
-:root{
-  --ecis-banner-ratio: 2.75;
-  --ecis-banner-height-mobile: calc(100vw / var(--ecis-banner-ratio));
-}
-
-/* Escritorio / tablet horizontal: nunca recortar la fotografía. */
-@media (min-width:701px){
-  .home-banner,
-  .page-banner{
-    min-height:0 !important;
-    aspect-ratio:2079 / 756;
-    background-size:100% auto !important;
-    background-position:center center !important;
-    background-repeat:no-repeat !important;
-  }
-
-  .contact-hero{
-    min-height:0 !important;
-    aspect-ratio:2079 / 756;
-    display:flex;
-    align-items:center;
-  }
-
-  .contact-hero::after{
-    inset:0 !important;
-    width:100% !important;
-    height:100% !important;
-    background-size:100% auto !important;
-    background-position:center center !important;
-    background-repeat:no-repeat !important;
-  }
-}
-
-/* Celular / pantalla angosta: fotografía completa y limpia arriba;
-   contenido textual debajo, sin crop ni deformación. */
-@media (max-width:700px){
-  .home-banner,
-  .page-banner{
-    min-height:0 !important;
-    aspect-ratio:auto !important;
-    padding-top:var(--ecis-banner-height-mobile) !important;
-    background-size:100% auto !important;
-    background-position:center top !important;
-    background-repeat:no-repeat !important;
-  }
-
-  .contact-hero{
-    min-height:0 !important;
-    aspect-ratio:auto !important;
-    padding-top:var(--ecis-banner-height-mobile) !important;
-  }
-
-  .contact-hero::after{
-    top:0 !important;
-    right:0 !important;
-    bottom:auto !important;
-    left:0 !important;
-    width:100% !important;
-    height:var(--ecis-banner-height-mobile) !important;
-    background-size:100% auto !important;
-    background-position:center top !important;
-    background-repeat:no-repeat !important;
-  }
-}
-
-/* ECIS 122 — ajuste puntual del encuadre del banner de Contacto.
-   Solo escritorio: se muestra un poco más de la parte inferior de la imagen. */
+/* ECIS 123 — volver a banners delgados y bajar el encuadre solo en Contacto */
 @media (min-width:701px){
   .contact-hero::after{
-    background-size:cover !important;
-    background-position:center 70% !important;
+    background-position:50% 72% !important;
   }
 }
