@@ -9,7 +9,7 @@
 <meta name="author" content="ECIS"/>
 <link href="assets/images/favicon.svg" rel="icon" type="image/svg+xml"/>
 <title>ECIS | Confirmación y pago</title>
-<link href="styles.css?v=20260928-clean105" rel="stylesheet"/>
+<link href="styles.css?v=20260930-aula118" rel="stylesheet"/>
 
 </head>
 <body>
@@ -62,7 +62,7 @@
 
 <article class="checkout-card checkout-payment-card" id="payment-method-card">
 <div class="checkout-card-head checkout-card-head-simple">
-<div><p class="eyebrow">MEDIO DE PAGO</p><h2>Elegí cómo pagar</h2><p>Podés realizar una transferencia o pagar con Mercado Pago mediante un link oficial.</p></div>
+<div><p class="eyebrow">MEDIO DE PAGO</p><h2>Elegí cómo pagar</h2><p>Elegí una opción. ECIS te guiará hasta obtener tu código y enviar el comprobante.</p></div>
 </div>
 <div class="payment-method-grid" role="radiogroup" aria-label="Medios de pago disponibles">
 <label class="payment-method is-selected">
@@ -83,7 +83,7 @@
 
 <article class="checkout-card transfer-checkout" id="transfer-checkout" hidden>
 <div class="checkout-card-head checkout-card-head-simple">
-<div><p class="eyebrow">PASO 1 DE 2 · TRANSFERENCIA</p><h2>Realizá la transferencia</h2><p>Usá los datos de esta pantalla. Cuando el pago esté hecho, continuá con el botón de abajo.</p></div>
+<div><p class="eyebrow">PASO 1 DE 2 · TRANSFERENCIA</p><h2>Realizá la transferencia</h2><p>1. Transferí el importe indicado. 2. Verificá el titular. 3. Volvé a ECIS y confirmá la operación para generar tu código.</p></div>
 </div>
 <div class="transfer-simple-grid">
 <div><span>Cuenta</span><strong>Ualá</strong></div>
@@ -91,49 +91,49 @@
 <div class="transfer-alias-row"><span>Alias</span><strong>lucas.eci</strong><button type="button" id="copy-transfer-alias">Copiar</button></div>
 <div><span>Importe</span><strong id="transfer-amount">—</strong></div>
 </div>
-<div class="transfer-important"><strong>Importante:</strong> verificá el titular antes de transferir. El código de inscripción se generará cuando confirmes que ya realizaste el pago.</div>
+<div class="transfer-important"><strong>Antes de continuar:</strong> verificá que el titular sea <em>Lucas Aranda Amarilla</em>. Después de transferir, confirmá la operación para generar tu código ECIS.</div>
 <p class="checkout-error" id="payment-error" role="alert" hidden></p>
-<button class="button button-primary checkout-primary" id="transfer-done" type="button">Ya realicé la transferencia →</button>
+<button class="button button-primary checkout-primary" id="transfer-done" type="button">Confirmar transferencia y generar mi código →</button>
 <button class="checkout-step-back" data-payment-back type="button">← Cambiar medio de pago</button>
 </article>
 
 <article class="checkout-card mp-redirect-checkout" id="mp-checkout" hidden>
-<div class="checkout-card-head checkout-card-head-simple"><div><p class="eyebrow">PASO 1 DE 2 · MERCADO PAGO / TARJETA</p><h2>Realizá el pago</h2><p>Abrí el link oficial de Mercado Pago. ECIS quedará abierto y preparado para el siguiente paso.</p></div></div>
+<div class="checkout-card-head checkout-card-head-simple"><div><p class="eyebrow">PASO 1 DE 2 · MERCADO PAGO / TARJETA</p><h2>Completá el pago en Mercado Pago</h2><p>1. Abrí Mercado Pago. 2. Completá el pago. 3. Volvé a ECIS para generar tu código de inscripción.</p></div></div>
 <div class="mp-checkout-summary"><div><span>Importe</span><strong id="mp-checkout-amount">—</strong></div><div><span>Código ECIS</span><strong>Se genera al confirmar el pago</strong></div></div>
-<div class="mp-guide-note"><strong>No cierres esta pestaña.</strong><span>Mercado Pago se abrirá aparte. Cuando termines, volvé a ECIS: te llevaremos automáticamente al paso siguiente.</span></div>
-<div class="mp-hybrid-layout" id="mp-hybrid-options"><div class="mp-hybrid-action"><div class="mp-redirect-hero"><div class="mp-redirect-icon" aria-hidden="true">MP</div><div><strong>Link oficial de Mercado Pago</strong><p>Podés pagar desde tu cuenta de Mercado Pago o con los medios y tarjetas que la plataforma tenga disponibles.</p></div></div><a class="button button-primary checkout-primary mp-redirect-button" id="mp-redirect-button" href="#" target="_blank" rel="noopener noreferrer">Abrir Mercado Pago →</a><p class="mp-redirect-small">Al tocar el botón, esta pantalla avanzará al paso 2 y Mercado Pago se abrirá en otra pestaña.</p></div>
-<div class="mp-hybrid-qr" aria-label="Código QR para pagar con Mercado Pago"><p class="eyebrow">SI ESTÁS DESDE UNA COMPUTADORA</p><img id="mp-qr-image" src="assets/images/mercadopago-link-qr.png" alt="Código QR del link de pago de Mercado Pago" width="220" height="220"/><strong>Escaneá con tu celular</strong><small>El QR dirige al mismo link oficial.</small><button class="button registration-secondary mp-qr-continue" id="mp-qr-continue" type="button">Ya abrí Mercado Pago desde el QR →</button></div></div>
-<div class="mp-secure-note"><strong>Seguridad:</strong> ECIS no recibe ni almacena datos de tarjeta. El pago se realiza directamente en Mercado Pago.</div><p class="checkout-error" id="mp-payment-error" role="alert" hidden></p><button class="checkout-step-back" data-payment-back type="button">← Cambiar medio de pago</button>
+<div class="mp-guide-note"><strong>Mantené ECIS abierto.</strong><span>Mercado Pago se abrirá aparte. Al volver a esta pestaña vas a encontrar el paso para confirmar el pago y generar tu código.</span></div>
+<div class="mp-hybrid-layout" id="mp-hybrid-options"><div class="mp-hybrid-action"><div class="mp-redirect-hero"><div class="mp-redirect-icon" aria-hidden="true">MP</div><div><strong>Link oficial de Mercado Pago</strong><p>Podés pagar desde tu cuenta de Mercado Pago o con los medios y tarjetas que la plataforma tenga disponibles.</p></div></div><a class="button button-primary checkout-primary mp-redirect-button" id="mp-redirect-button" href="#" target="_blank" rel="noopener noreferrer">Abrir Mercado Pago →</a><p class="mp-redirect-small">ECIS dejará preparado el siguiente paso mientras completás el pago en Mercado Pago.</p></div>
+<div class="mp-hybrid-qr" aria-label="Código QR para pagar con Mercado Pago"><p class="eyebrow">SI ESTÁS DESDE UNA COMPUTADORA</p><img id="mp-qr-image" src="assets/images/mercadopago-link-qr.png" alt="Código QR del link de pago de Mercado Pago" width="220" height="220"/><strong>Escaneá con tu celular</strong><small>El QR dirige al mismo link oficial.</small><button class="button registration-secondary mp-qr-continue" id="mp-qr-continue" type="button">Ya completé el pago con el QR →</button></div></div>
+<div class="mp-secure-note"><strong>Seguridad:</strong> los datos de tarjeta se procesan directamente en Mercado Pago; ECIS gestiona únicamente tu inscripción.</div><p class="checkout-error" id="mp-payment-error" role="alert" hidden></p><button class="checkout-step-back" data-payment-back type="button">← Cambiar medio de pago</button>
 </article>
 <article class="checkout-card mp-confirm-checkout" id="mp-confirm-checkout" hidden>
-<div class="checkout-card-head checkout-card-head-simple"><div><p class="eyebrow">PASO 2 DE 2 · MERCADO PAGO / TARJETA</p><h2>Confirmá que ya pagaste</h2><p>Cuando el pago haya finalizado en Mercado Pago, confirmalo acá. ECIS registrará tu inscripción y generará tu código.</p></div></div>
-<div class="mp-confirm-panel"><div class="mp-confirm-number">2</div><div><strong>Volvé a esta pantalla después del pago</strong><p>No cierres ECIS hasta ver tu código de inscripción y las opciones para enviar el comprobante.</p></div></div>
-<button class="button button-primary checkout-primary" id="mp-done" type="button">Ya realicé el pago →</button><a class="button registration-secondary checkout-secondary-link" id="mp-reopen-button" href="#" target="_blank" rel="noopener noreferrer">Volver a abrir Mercado Pago</a><button class="checkout-step-back" id="mp-confirm-back" type="button">← Volver al paso de pago</button>
+<div class="checkout-card-head checkout-card-head-simple"><div><p class="eyebrow">PASO 2 DE 2 · MERCADO PAGO / TARJETA</p><h2>Generá tu código de inscripción</h2><p>Usá este botón después de completar el pago en Mercado Pago. ECIS registrará la inscripción y mostrará tu código.</p></div></div>
+<div class="mp-confirm-panel"><div class="mp-confirm-number">2</div><div><strong>Pago completado → código ECIS</strong><p>Confirmá la operación y esperá en esta pantalla hasta que aparezca tu código y las opciones para enviar el comprobante.</p></div></div>
+<button class="button button-primary checkout-primary" id="mp-done" type="button">Confirmar pago y generar mi código →</button><a class="button registration-secondary checkout-secondary-link" id="mp-reopen-button" href="#" target="_blank" rel="noopener noreferrer">Volver a abrir Mercado Pago</a><button class="checkout-step-back" id="mp-confirm-back" type="button">← Volver al paso de pago</button>
 </article>
 </div><!-- /#payment-flow -->
 
 <article class="checkout-card checkout-success" id="registration-finished" hidden>
 <div class="success-check" aria-hidden="true">✓</div>
 <p class="eyebrow">PASO FINAL · COMPROBANTE</p>
-<h2>Guardá tu código de inscripción</h2>
+<h2>Tu inscripción quedó registrada</h2>
 <div class="final-registration-code" id="final-registration-code">ECIS-0000</div>
 <button class="copy-code-button" id="copy-registration-code" type="button">Copiar código</button>
-<p class="success-lead">Tu pago todavía <strong>no está confirmado</strong>.</p>
+<p class="success-lead">Último paso: <strong>enviá el comprobante junto con tu código ECIS</strong>.</p>
 <div class="success-instructions">
-<p>Para que ECIS pueda verificar el pago manualmente, envianos por WhatsApp o correo electrónico:</p>
+<p>Elegí WhatsApp o correo. El mensaje ya incluye tus datos de inscripción; adjuntá el comprobante antes de enviarlo.</p>
 <ol><li>Tu código de inscripción.</li><li>El comprobante de pago.</li></ol>
-<p class="success-note">La inscripción será confirmada después de verificar el comprobante y el ingreso del pago. Si el pago fue realizado desde una cuenta de otra persona, no hay problema: identificaremos la inscripción mediante tu código.</p>
+<p class="success-note">ECIS confirmará la participación después de verificar el comprobante y el ingreso del pago. El código permite identificar tu inscripción aunque el pago se haya realizado desde otra cuenta.</p>
 </div>
 <div class="success-contact-actions">
 <a class="button button-primary" id="send-whatsapp-proof" href="#" target="_blank" rel="noopener noreferrer">Enviar por WhatsApp →</a>
 <a class="button registration-secondary" id="send-email-proof" href="#">Enviar por correo →</a>
 </div>
-<p class="success-small"><strong>No cierres esta pantalla hasta haber enviado el comprobante.</strong> Adjuntalo manualmente al abrir WhatsApp o tu correo.</p>
+<p class="success-small"><strong>Completá este último paso ahora.</strong> Abrí WhatsApp o correo, adjuntá el comprobante y enviá el mensaje preparado.</p>
 </article>
 
 
 
-<noscript><p class="noscript-note">Para completar la inscripción necesitás habilitar JavaScript en tu navegador.</p></noscript>
+<noscript><p class="noscript-note">Activá JavaScript en tu navegador para completar la inscripción.</p></noscript>
 <iframe id="ecis-registration-frame" name="ecis-registration-frame" title="Registro ECIS" hidden></iframe>
 <form id="ecis-registration-post" method="POST" target="ecis-registration-frame" hidden>
 <input id="ecis-registration-payload" name="payload" type="hidden"/>
@@ -149,6 +149,6 @@
 </div></div>
 <div class="footer-bottom"><div class="container">© <span id="year"></span> ECIS. Todos los derechos reservados.<span>De la evidencia a la práctica.</span></div></div>
 </footer>
-<script src="script.js?v=20260928-clean105"></script>
+<script src="script.js?v=20260930-robust117"></script>
 </body>
 </html>

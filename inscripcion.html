@@ -14,7 +14,7 @@
 <meta property="og:description" content="Completá tus datos para iniciar una inscripción en ECIS."/>
 <link href="assets/images/favicon.svg" rel="icon" type="image/svg+xml"/>
 <title>ECIS | Inscripción</title>
-<link href="styles.css?v=20260928-clean105" rel="stylesheet"/>
+<link href="styles.css?v=20260930-aula118" rel="stylesheet"/>
 </head>
 <body>
 <a class="skip-link" href="#contenido">Saltar al contenido</a>
@@ -60,11 +60,13 @@
 <div class="checkout-form-grid">
 <div class="checkout-field">
 <label for="enroll-name">Nombre <span aria-hidden="true">*</span></label>
-<input id="enroll-name" name="nombre" type="text" autocomplete="given-name" placeholder="Nombre" required maxlength="60"/>
+<input id="enroll-name" name="nombre" type="text" inputmode="text" autocomplete="given-name" placeholder="Nombre" required minlength="2" maxlength="60" pattern="[A-Za-zÀ-ÖØ-öø-ÿĀ-ž'’ -]{2,60}" title="Usá letras, espacios, apóstrofes o guiones." aria-describedby="enroll-name-help"/>
+<p class="checkout-field-hint" id="enroll-name-help">Usá letras; podés incluir espacios, apóstrofes y guiones.</p>
 </div>
 <div class="checkout-field">
 <label for="enroll-last-name">Apellido <span aria-hidden="true">*</span></label>
-<input id="enroll-last-name" name="apellido" type="text" autocomplete="family-name" placeholder="Apellido" required maxlength="60"/>
+<input id="enroll-last-name" name="apellido" type="text" inputmode="text" autocomplete="family-name" placeholder="Apellido" required minlength="2" maxlength="60" pattern="[A-Za-zÀ-ÖØ-öø-ÿĀ-ž'’ -]{2,60}" title="Usá letras, espacios, apóstrofes o guiones." aria-describedby="enroll-last-name-help"/>
+<p class="checkout-field-hint" id="enroll-last-name-help">Usá letras; podés incluir espacios, apóstrofes y guiones.</p>
 </div>
 <div class="checkout-field">
 <label for="enroll-email">Correo electrónico <span aria-hidden="true">*</span></label>
@@ -72,11 +74,13 @@
 </div>
 <div class="checkout-field">
 <label for="enroll-dni">DNI <span aria-hidden="true">*</span></label>
-<input id="enroll-dni" name="dni" type="text" inputmode="numeric" autocomplete="off" placeholder="Ej.: 12345678" required maxlength="15"/>
+<input id="enroll-dni" name="dni" type="text" inputmode="numeric" autocomplete="off" placeholder="Ej.: 12345678" required minlength="6" maxlength="12" pattern="[0-9]{6,12}" title="Escribí el DNI únicamente con números." aria-describedby="enroll-dni-help"/>
+<p class="checkout-field-hint" id="enroll-dni-help">Escribí el DNI únicamente con números.</p>
 </div>
 <div class="checkout-field">
 <label for="enroll-phone">Teléfono <span aria-hidden="true">*</span></label>
-<input id="enroll-phone" name="telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="Ej.: 11 1234 5678" required maxlength="30"/>
+<input id="enroll-phone" name="telefono" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Ej.: 1123456789" required minlength="8" maxlength="15" pattern="[0-9]{8,15}" title="Escribí el teléfono únicamente con números e incluí el código de área." aria-describedby="enroll-phone-help"/>
+<p class="checkout-field-hint" id="enroll-phone-help">Escribí únicamente números e incluí el código de área.</p>
 </div>
 <div class="checkout-field checkout-field-full">
 <label for="enroll-institution">Institución / Organización <span class="checkout-optional">Opcional</span></label>
@@ -90,7 +94,7 @@
 </select>
 </div>
 <p class="checkout-field-help" id="experience-help">La disponibilidad y el importe se toman de las experiencias activas de ECIS.</p>
-<button class="checkout-retry" id="experience-retry" type="button" hidden>Reintentar carga</button>
+<button class="checkout-retry" id="experience-retry" type="button" hidden>Actualizar experiencias</button>
 </div>
 </div>
 
@@ -114,6 +118,6 @@
 </div></div>
 <div class="footer-bottom"><div class="container">© <span id="year"></span> ECIS. Todos los derechos reservados.<span>De la evidencia a la práctica.</span></div></div>
 </footer>
-<script src="script.js?v=20260928-clean105"></script>
+<script src="script.js?v=20260930-robust117"></script>
 </body>
 </html>

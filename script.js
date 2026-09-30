@@ -1,6 +1,6 @@
 // =========================================================
-// ECIS — sitio web limpio 105
-// Navegación, contacto, inscripción y pago híbrido Link + QR
+// ECIS — clásica mejorada 117
+// Base visual/textual pre-106 + movimiento sutil, acciones claras y tolerancia de red adaptativa
 // =========================================================
 
 const ECIS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwm5voUlP5k02F-bNalKUkUknY2SvKe6PVpgOivqn8z0zKPKHNzGmII0UNxJLfljTkp/exec';
@@ -8,6 +8,8 @@ const ECIS_STORAGE_KEY = 'ecis_enrollment_draft';
 const ECIS_RESULT_KEY = 'ecis_enrollment_result';
 const ECIS_REGISTRATION_ATTEMPT_PREFIX = 'ecis_registration_attempt_';
 const ECIS_PAYMENT_STAGE_KEY = 'ecis_payment_stage';
+const ECIS_EXPERIENCES_CACHE_KEY = 'ecis_experiences_cache_v1';
+const ECIS_EXPERIENCES_CACHE_TTL = 30 * 60 * 1000;
 const ECIS_WHATSAPP = '5401136741338';
 const ECIS_EMAIL = 'ecis.ar.edu@gmail.com';
 
@@ -114,8 +116,16 @@ function prefersReducedMotion() {
   return Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 }
 
-function smoothScrollTo(element, block = 'center') {
-  element?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block });
+function smoothScrollTo(element, block = 'start') {
+  if (!element) return;
+  const header = document.querySelector('.site-header');
+  const headerHeight = header ? header.getBoundingClientRect().height : 0;
+  const rect = element.getBoundingClientRect();
+  const target = window.scrollY + rect.top - headerHeight - 16;
+  window.scrollTo({
+    top: Math.max(0, target),
+    behavior: prefersReducedMotion() ? 'auto' : 'smooth'
+  });
 }
 
 function getEnrollmentFullName(data) {
@@ -133,6 +143,160 @@ function getMpLinkConfig(data) {
   const amount = Number(data?.importe);
   if (!Number.isFinite(amount) || amount !== Number(config.amount)) return null;
   return config;
+}
+
+function getNetworkProfile() {
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const effectiveType = String(connection?.effectiveType || '').toLowerCase();
+  const saveData = Boolean(connection?.saveData);
+  const rtt = Number(connection?.rtt || 0);
+  const downlink = Number(connection?.downlink || 0);
+
+  const slow = saveData || effectiveType === 'slow-2g' || effectiveType === '2g' || effectiveType === '3g' || (rtt > 650 && rtt > 0) || (downlink > 0 && downlink < 1.2);
+  const fast = !slow && effectiveType === '4g' && (rtt === 0 || rtt <= 180) && (downlink === 0 || downlink >= 4);
+
+  // Los límites solo determinan cuándo reintentar una consulta individual.
+  // Una respuesta rápida avanza inmediatamente; una señal lenta dispone de
+  // una ventana amplia para recuperar el mismo registro sin duplicarlo.
+  return {
+    requestTimeout: slow ? 32000 : (fast ? 8000 : 16000),
+    registrationWindow: slow ? 10 * 60 * 1000 : 7 * 60 * 1000,
+    slow,
+    fast
+  };
+}
+
+function adaptiveDelay(attempt) {
+  const steps = [250, 450, 700, 1100, 1700, 2500, 3600, 5000, 6500];
+  return steps[Math.min(attempt, steps.length - 1)];
+}
+
+function waitForConnection(maxMs = 120000) {
+  if (navigator.onLine !== false) return Promise.resolve();
+  return new Promise(resolve => {
+    const done = () => {
+      window.removeEventListener('online', done);
+      resolve();
+    };
+    window.addEventListener('online', done, { once: true });
+    window.setTimeout(done, maxMs);
+  });
+}
+
+function readExperiencesCache() {
+  try {
+    const raw = localStorage.getItem(ECIS_EXPERIENCES_CACHE_KEY);
+    if (!raw) return [];
+    const cached = JSON.parse(raw);
+    if (!cached || !Array.isArray(cached.items)) return [];
+    if (Date.now() - Number(cached.savedAt || 0) > ECIS_EXPERIENCES_CACHE_TTL) return [];
+    return cached.items;
+  } catch (_) {
+    return [];
+  }
+}
+
+function writeExperiencesCache(items) {
+  try {
+    localStorage.setItem(ECIS_EXPERIENCES_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), items }));
+  } catch (_) {}
+}
+
+
+// =========================================================
+// Entrada de datos — evita errores antes de enviar el formulario
+// =========================================================
+
+function sanitizePersonName(value) {
+  return String(value || '')
+    .replace(/[^A-Za-zÀ-ÖØ-öø-ÿĀ-ž'’\- ]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/-{2,}/g, '-')
+    .replace(/[’']{2,}/g, "'");
+}
+
+function sanitizeDigits(value) {
+  return String(value || '').replace(/\D+/g, '');
+}
+
+function isValidPersonName(value) {
+  const clean = String(value || '').trim();
+  return /^[A-Za-zÀ-ÖØ-öø-ÿĀ-ž]+(?:[ '’\-][A-Za-zÀ-ÖØ-öø-ÿĀ-ž]+)*$/.test(clean);
+}
+
+function bindSanitizedInput(input, sanitizer, validator, validationMessage) {
+  if (!input) return;
+  const apply = () => {
+    const caret = input.selectionStart;
+    const previousLength = input.value.length;
+    const sanitized = sanitizer(input.value);
+    if (sanitized !== input.value) {
+      input.value = sanitized;
+      if (typeof caret === 'number') {
+        const delta = previousLength - sanitized.length;
+        const next = Math.max(0, caret - delta);
+        try { input.setSelectionRange(next, next); } catch (_) {}
+      }
+    }
+    input.setCustomValidity(input.value && !validator(input.value) ? validationMessage : '');
+  };
+  input.addEventListener('input', apply);
+  input.addEventListener('blur', apply);
+  apply();
+}
+
+function initializeInputGuards() {
+  const nameMessage = 'Usá letras; podés incluir espacios, apóstrofes y guiones.';
+  bindSanitizedInput(document.querySelector('#enroll-name'), sanitizePersonName, value => isValidPersonName(value) && value.trim().length >= 2, nameMessage);
+  bindSanitizedInput(document.querySelector('#enroll-last-name'), sanitizePersonName, value => isValidPersonName(value) && value.trim().length >= 2, nameMessage);
+  bindSanitizedInput(document.querySelector('#nombre'), sanitizePersonName, value => isValidPersonName(value) && value.trim().length >= 3, nameMessage);
+  bindSanitizedInput(document.querySelector('#enroll-dni'), sanitizeDigits, value => /^\d{6,12}$/.test(value), 'Escribí el DNI únicamente con números.');
+  bindSanitizedInput(document.querySelector('#enroll-phone'), sanitizeDigits, value => /^\d{8,15}$/.test(value), 'Escribí el teléfono únicamente con números e incluí el código de área.');
+}
+
+
+function normalizeEnrollmentData(data) {
+  if (!data || typeof data !== 'object') return data;
+  return {
+    ...data,
+    nombre: sanitizePersonName(data.nombre).trim(),
+    apellido: sanitizePersonName(data.apellido).trim(),
+    dni: sanitizeDigits(data.dni),
+    telefono: sanitizeDigits(data.telefono),
+    email: String(data.email || '').trim(),
+    institucion: String(data.institucion || '').trim()
+  };
+}
+
+function initializeNetworkStatus() {
+  const status = document.createElement('div');
+  status.className = 'network-status';
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+  status.hidden = true;
+  document.body.appendChild(status);
+
+  let hideTimer = 0;
+  const show = message => {
+    window.clearTimeout(hideTimer);
+    status.textContent = message;
+    status.hidden = false;
+    requestAnimationFrame(() => status.classList.add('is-visible'));
+  };
+  const hide = (delay = 0) => {
+    window.clearTimeout(hideTimer);
+    hideTimer = window.setTimeout(() => {
+      status.classList.remove('is-visible');
+      window.setTimeout(() => { status.hidden = true; }, 240);
+    }, delay);
+  };
+
+  window.addEventListener('offline', () => show('Esperando conexión… ECIS conservará este paso y continuará al recuperar señal.'));
+  window.addEventListener('online', () => {
+    show('Conexión recuperada. Continuamos con tu proceso.');
+    hide(1800);
+  });
+  if (navigator.onLine === false) show('Esperando conexión… ECIS conservará este paso y continuará al recuperar señal.');
 }
 
 // =========================================================
@@ -223,7 +387,7 @@ contactForm?.addEventListener('submit', async event => {
     try { data = await response.json(); } catch (_) {}
 
     if (!response.ok || data.success === false) {
-      throw new Error(data.message || 'No se pudo enviar el formulario.');
+      throw new Error(data.message || 'Podés volver a enviar el mensaje o elegir WhatsApp/correo.');
     }
 
     contactForm.reset();
@@ -234,7 +398,7 @@ contactForm?.addEventListener('submit', async event => {
     }
   } catch (_) {
     if (formStatus) {
-      formStatus.textContent = 'No pudimos enviar tu consulta en este momento. Intentá nuevamente o comunicate con ECIS por correo electrónico o WhatsApp.';
+      formStatus.textContent = 'Podés volver a enviar el mensaje o elegir correo electrónico o WhatsApp para continuar.';
       formStatus.classList.add('is-error');
       formStatus.hidden = false;
       formStatus.focus({ preventScroll: true });
@@ -259,13 +423,8 @@ const enrollmentError = document.querySelector('#enrollment-error');
 
 let loadedExperiences = [];
 
-function loadExperiencesJsonp(timeoutMs = 12000) {
+function loadExperiencesJsonp(timeoutMs = getNetworkProfile().requestTimeout) {
   if (!experienceSelect) return Promise.resolve([]);
-
-  experienceSelect.disabled = true;
-  experienceSelect.innerHTML = '<option value="">Cargando experiencias…</option>';
-  if (experienceRetry) experienceRetry.hidden = true;
-  setError(enrollmentError, '');
 
   return new Promise((resolve, reject) => {
     const callbackName = `ecisExperiencias_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -281,7 +440,7 @@ function loadExperiencesJsonp(timeoutMs = 12000) {
       if (settled) return;
       settled = true;
       cleanup();
-      reject(new Error('Tiempo de espera agotado.'));
+      reject(new Error('La respuesta sigue en curso.'));
     }, timeoutMs);
 
     window[callbackName] = data => {
@@ -291,7 +450,7 @@ function loadExperiencesJsonp(timeoutMs = 12000) {
       cleanup();
 
       if (!data || data.resultado !== 'ok' || !Array.isArray(data.experiencias)) {
-        reject(new Error(data?.mensaje || 'No se pudieron cargar las experiencias.'));
+        reject(new Error(data?.mensaje || 'Actualizá la información de experiencias para continuar.'));
         return;
       }
       resolve(data.experiencias);
@@ -302,7 +461,7 @@ function loadExperiencesJsonp(timeoutMs = 12000) {
       settled = true;
       window.clearTimeout(timeout);
       cleanup();
-      reject(new Error('No se pudieron cargar las experiencias.'));
+      reject(new Error('La respuesta sigue en curso.'));
     };
 
     const separator = ECIS_ENDPOINT.includes('?') ? '&' : '?';
@@ -312,45 +471,98 @@ function loadExperiencesJsonp(timeoutMs = 12000) {
   });
 }
 
+function renderExperiences(items, { preserveSelection = true } = {}) {
+  if (!experienceSelect) return;
+  const current = preserveSelection ? experienceSelect.value : '';
+  loadedExperiences = Array.isArray(items) ? items : [];
+  experienceSelect.innerHTML = '<option value="">Seleccioná una experiencia</option>';
+
+  loadedExperiences.forEach(item => {
+    const option = document.createElement('option');
+    option.value = String(item.id || '');
+    option.textContent = String(item.nombre || '');
+    option.dataset.name = String(item.nombre || '');
+    option.dataset.type = String(item.tipo || '');
+    option.dataset.amount = String(item.importe ?? '');
+    experienceSelect.appendChild(option);
+  });
+
+  experienceSelect.disabled = !loadedExperiences.length;
+  if (current && loadedExperiences.some(item => String(item.id) === String(current))) {
+    experienceSelect.value = current;
+  }
+}
+
+function applyPreferredExperience() {
+  if (!experienceSelect || !loadedExperiences.length) return;
+  const draft = readJsonStorage(ECIS_STORAGE_KEY);
+  const requestedId = new URLSearchParams(window.location.search).get('experiencia');
+  const preferredId = requestedId || draft?.experienciaId || '';
+  if (preferredId && loadedExperiences.some(item => String(item.id) === String(preferredId))) {
+    experienceSelect.value = String(preferredId);
+  }
+}
+
+function guideToEnrollmentIfRequested() {
+  const requestedId = new URLSearchParams(window.location.search).get('experiencia');
+  if (!requestedId) return;
+  window.setTimeout(() => {
+    const card = document.querySelector('#inscripcion-form');
+    smoothScrollTo(card, 'start');
+    const firstEmpty = Array.from(enrollmentForm?.querySelectorAll('input[required],select[required]') || [])
+      .find(field => !String(field.value || '').trim());
+    firstEmpty?.focus({ preventScroll: true });
+  }, 180);
+}
+
 async function populateExperiences() {
   if (!experienceSelect) return;
 
-  try {
-    loadedExperiences = await loadExperiencesJsonp();
-    experienceSelect.innerHTML = '<option value="">Seleccioná una experiencia</option>';
-
-    loadedExperiences.forEach(item => {
-      const option = document.createElement('option');
-      option.value = String(item.id || '');
-      option.textContent = String(item.nombre || '');
-      option.dataset.name = String(item.nombre || '');
-      option.dataset.type = String(item.tipo || '');
-      option.dataset.amount = String(item.importe ?? '');
-      experienceSelect.appendChild(option);
-    });
-
-    experienceSelect.disabled = !loadedExperiences.length;
-    if (experienceHelp) {
-      experienceHelp.textContent = loadedExperiences.length
-        ? 'El importe correspondiente se mostrará en el siguiente paso.'
-        : 'No hay experiencias disponibles en este momento.';
-    }
-
-    const draft = readJsonStorage(ECIS_STORAGE_KEY);
-    const requestedId = new URLSearchParams(window.location.search).get('experiencia');
-    const preferredId = requestedId || draft?.experienciaId || '';
-
-    if (preferredId && loadedExperiences.some(item => String(item.id) === String(preferredId))) {
-      experienceSelect.value = String(preferredId);
-    }
-  } catch (_) {
-    experienceSelect.innerHTML = '<option value="">No se pudieron cargar las experiencias</option>';
+  const cached = readExperiencesCache();
+  if (cached.length) {
+    renderExperiences(cached, { preserveSelection: false });
+    applyPreferredExperience();
+    if (experienceHelp) experienceHelp.textContent = 'Experiencia lista. El importe se mostrará en el siguiente paso.';
+  } else {
     experienceSelect.disabled = true;
-    if (experienceHelp) experienceHelp.textContent = 'Verificá tu conexión e intentá nuevamente.';
-    if (experienceRetry) experienceRetry.hidden = false;
-    setError(enrollmentError, 'No pudimos cargar las experiencias disponibles.');
+    experienceSelect.innerHTML = '<option value="">Cargando experiencias…</option>';
   }
+
+  if (experienceRetry) experienceRetry.hidden = true;
+  setError(enrollmentError, '');
+
+  let lastError = null;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      await waitForConnection();
+      const fresh = await loadExperiencesJsonp();
+      renderExperiences(fresh);
+      writeExperiencesCache(fresh);
+      applyPreferredExperience();
+      if (experienceHelp) {
+        experienceHelp.textContent = fresh.length
+          ? 'Experiencia lista. El importe se mostrará en el siguiente paso.'
+          : 'Las próximas experiencias se publicarán acá.';
+      }
+      guideToEnrollmentIfRequested();
+      return;
+    } catch (error) {
+      lastError = error;
+      if (cached.length) {
+        guideToEnrollmentIfRequested();
+        return;
+      }
+      await new Promise(resolve => window.setTimeout(resolve, adaptiveDelay(attempt)));
+    }
+  }
+
+  experienceSelect.innerHTML = '<option value="">Actualizá las experiencias</option>';
+  experienceSelect.disabled = true;
+  if (experienceHelp) experienceHelp.textContent = 'La conexión está tardando. Tocá “Actualizar experiencias” para continuar.';
+  if (experienceRetry) experienceRetry.hidden = false;
+  setError(enrollmentError, '');
 }
+
 
 function restoreEnrollmentDraft() {
   if (!enrollmentForm) return;
@@ -376,6 +588,7 @@ if (enrollmentForm) {
   restoreEnrollmentDraft();
   populateExperiences();
   experienceRetry?.addEventListener('click', populateExperiences);
+  window.addEventListener('online', () => { if (experienceSelect?.disabled) populateExperiences(); });
 
   enrollmentForm.addEventListener('submit', event => {
     event.preventDefault();
@@ -407,7 +620,7 @@ if (enrollmentForm) {
     };
 
     if (!data.experiencia || !Number.isFinite(data.importe) || data.importe <= 0) {
-      setError(enrollmentError, 'No pudimos obtener los datos de la experiencia seleccionada. Reintentá la carga.');
+      setError(enrollmentError, 'Actualizá las experiencias para continuar con los datos correctos.');
       return;
     }
 
@@ -532,7 +745,7 @@ function showTransferStep({ scroll = true } = {}) {
 function showMercadoPagoStep({ scroll = true } = {}) {
   const config = getMpLinkConfig(paymentDraft);
   if (!config) {
-    setError(mpPaymentError, 'Mercado Pago no está disponible para esta experiencia.');
+    setError(mpPaymentError, 'Elegí transferencia para continuar con esta experiencia.');
     return;
   }
   if (mpCheckoutAmount) mpCheckoutAmount.textContent = formatArs(paymentDraft?.importe);
@@ -566,7 +779,7 @@ function renderPaymentSummary(data) {
     ['Correo electrónico', data.email],
     ['DNI', data.dni],
     ['Teléfono', data.telefono],
-    ['Institución / Organización', data.institucion || 'No informada'],
+    ['Institución / Organización', data.institucion || 'Información opcional'],
     ['Curso / Experiencia', data.experiencia]
   ];
 
@@ -618,7 +831,8 @@ function showFinishedState(code, data, method = 'Transferencia') {
   if (!finishedPanel || !paymentFlow) return;
   if (finalRegistrationCode) finalRegistrationCode.textContent = code;
   buildProofLinks(code, data, method);
-  clearPaymentStage();
+  removeStorage(ECIS_PAYMENT_STAGE_KEY);
+  setPaymentCloseWarning(true);
   updateCheckoutProgress('proof');
   paymentFlow.hidden = true;
   finishedPanel.hidden = false;
@@ -626,14 +840,14 @@ function showFinishedState(code, data, method = 'Transferencia') {
 }
 
 function submitRegistrationThroughIframe(payload) {
-  if (!postForm || !postPayload) throw new Error('No se pudo preparar el registro.');
+  if (!postForm || !postPayload) throw new Error('Recargá esta página para preparar nuevamente el registro.');
   postForm.action = ECIS_ENDPOINT;
   postForm.target = 'ecis-registration-frame';
   postPayload.value = JSON.stringify(payload);
   postForm.submit();
 }
 
-function consultarRegistroJsonp(registroId, timeoutMs = 12000) {
+function consultarRegistroJsonp(registroId, timeoutMs = getNetworkProfile().requestTimeout) {
   return new Promise((resolve, reject) => {
     const callbackName = `ecisRegistro_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const script = document.createElement('script');
@@ -648,7 +862,7 @@ function consultarRegistroJsonp(registroId, timeoutMs = 12000) {
       if (settled) return;
       settled = true;
       cleanup();
-      reject(new Error('La consulta del código está demorando.'));
+      reject(new Error('La conexión sigue en curso.'));
     }, timeoutMs);
 
     window[callbackName] = data => {
@@ -664,7 +878,7 @@ function consultarRegistroJsonp(registroId, timeoutMs = 12000) {
       settled = true;
       window.clearTimeout(timeout);
       cleanup();
-      reject(new Error('No se pudo consultar el código.'));
+      reject(new Error('La respuesta sigue en curso.'));
     };
 
     const separator = ECIS_ENDPOINT.includes('?') ? '&' : '?';
@@ -674,28 +888,38 @@ function consultarRegistroJsonp(registroId, timeoutMs = 12000) {
   });
 }
 
-async function esperarRegistroPorConsulta(registroId, totalMs = 90000) {
+async function esperarRegistroPorConsulta(registroId, totalMs = getNetworkProfile().registrationWindow, onProgress = () => {}) {
   const startedAt = Date.now();
-  let ultimoError = null;
+  let attempt = 0;
+  let serverError = null;
 
   while (Date.now() - startedAt < totalMs) {
+    await waitForConnection();
+    const elapsed = Date.now() - startedAt;
+    onProgress(elapsed);
+
     try {
       const data = await consultarRegistroJsonp(registroId);
       if (data?.resultado === 'ok' && data?.codigo) return data;
       if (data?.resultado === 'error') {
-        throw new Error(data.mensaje || 'No pudimos recuperar el código de inscripción.');
+        serverError = new Error(data.mensaje || 'ECIS necesita revisar los datos de la inscripción.');
+        break;
       }
-    } catch (error) {
-      ultimoError = error;
+    } catch (_) {
+      // Una consulta lenta se reintenta automáticamente. El registro conserva el mismo UUID.
     }
 
-    await new Promise(resolve => window.setTimeout(resolve, 1400));
+    await new Promise(resolve => window.setTimeout(resolve, adaptiveDelay(attempt)));
+    attempt += 1;
   }
 
-  throw ultimoError || new Error('La inscripción se registró, pero todavía no pudimos recuperar el código. Actualizá la página para intentarlo nuevamente.');
+  if (serverError) throw serverError;
+  const recoverable = new Error('Tu inscripción sigue guardada en este dispositivo. Cuando tengas conexión, tocá “Recuperar mi código” para continuar.');
+  recoverable.recoverable = true;
+  throw recoverable;
 }
 
-function postRegistrationAndWait(payload) {
+function postRegistrationAndWait(payload, onProgress = () => {}) {
   if (registrationPostPromise) return registrationPostPromise;
 
   registrationPostPromise = new Promise((resolve, reject) => {
@@ -719,7 +943,7 @@ function postRegistrationAndWait(payload) {
       }
 
       if (data.resultado === 'error') {
-        finish(reject, new Error(data.mensaje || 'No pudimos registrar la inscripción.'));
+        finish(reject, new Error(data.mensaje || 'ECIS necesita revisar la inscripción.'));
       }
     };
 
@@ -735,7 +959,7 @@ function postRegistrationAndWait(payload) {
     // Respaldo robusto: aunque el iframe termine en Apps Script y el navegador
     // no reciba el postMessage, consultamos el registro por su UUID hasta
     // recuperar el mismo código ya guardado en la planilla.
-    esperarRegistroPorConsulta(payload.registroId)
+    esperarRegistroPorConsulta(payload.registroId, getNetworkProfile().registrationWindow, onProgress)
       .then(data => finish(resolve, data))
       .catch(error => finish(reject, error));
   }).finally(() => {
@@ -764,7 +988,7 @@ function configureMpAvailability() {
   if (!config) {
     mpInput.disabled = true;
     methodCard?.classList.add('is-disabled');
-    if (helper) helper.textContent = 'No disponible para esta experiencia';
+    if (helper) helper.textContent = 'Disponible mediante transferencia';
     if (mpInput.checked) {
       const transferInput = paymentMethodInputs.find(input => input.value === 'Transferencia');
       if (transferInput) transferInput.checked = true;
@@ -806,8 +1030,16 @@ async function registerPaidEnrollment(action, methodKey, methodLabel, button, er
   }
 
   const originalText = button.textContent;
+  let finalButtonText = originalText;
   button.disabled = true;
-  button.textContent = 'Generando código…';
+  button.textContent = 'Registrando inscripción…';
+
+  const updateProgress = elapsed => {
+    if (navigator.onLine === false) button.textContent = 'Esperando señal para continuar…';
+    else if (elapsed > 45000) button.textContent = 'Seguimos recuperando tu código…';
+    else if (elapsed > 15000) button.textContent = 'Conexión en curso…';
+    else if (elapsed > 3500) button.textContent = 'Recuperando tu código…';
+  };
 
   try {
     const registroId = getRegistrationAttemptId(methodKey);
@@ -823,9 +1055,9 @@ async function registerPaidEnrollment(action, methodKey, methodLabel, button, er
       experienciaId: paymentDraft.experienciaId
     };
 
-    const response = await postRegistrationAndWait(payload);
+    const response = await postRegistrationAndWait(payload, updateProgress);
     const codigo = String(response?.codigo || '').trim();
-    if (!codigo) throw new Error('La inscripción se registró sin devolver un código. Contactá a ECIS.');
+    if (!codigo) { const error = new Error('Tu inscripción quedó registrada. Tocá “Recuperar mi código” para mostrar el código y continuar.'); error.recoverable = true; throw error; }
 
     writeJsonStorage(ECIS_RESULT_KEY, {
       codigo,
@@ -837,10 +1069,11 @@ async function registerPaidEnrollment(action, methodKey, methodLabel, button, er
 
     showFinishedState(codigo, paymentDraft, methodKey);
   } catch (error) {
-    setError(errorElement, error?.message || `No pudimos registrar tu pago por ${methodLabel}. Intentá nuevamente.`);
+    if (error?.recoverable) finalButtonText = 'Recuperar mi código →';
+    setError(errorElement, error?.message || `Tocá nuevamente el botón para continuar con ${methodLabel}.`);
   } finally {
     button.disabled = false;
-    button.textContent = originalText;
+    button.textContent = finalButtonText;
   }
 }
 
@@ -862,7 +1095,7 @@ async function recuperarRegistroPendienteAlCargar() {
     if (!registroId) continue;
 
     try {
-      const data = await consultarRegistroJsonp(registroId, 8000);
+      const data = await consultarRegistroJsonp(registroId, getNetworkProfile().requestTimeout);
       if (data?.resultado === 'ok' && data?.codigo) {
         const codigo = String(data.codigo).trim();
         writeJsonStorage(ECIS_RESULT_KEY, {
@@ -884,7 +1117,8 @@ async function recuperarRegistroPendienteAlCargar() {
 async function initializePaymentPage() {
   if (!paymentSummary) return;
 
-  paymentDraft = readJsonStorage(ECIS_STORAGE_KEY);
+  paymentDraft = normalizeEnrollmentData(readJsonStorage(ECIS_STORAGE_KEY));
+  if (paymentDraft) writeJsonStorage(ECIS_STORAGE_KEY, paymentDraft);
   if (!paymentDraft?.experienciaId) {
     window.location.replace('inscripcion.html');
     return;
@@ -954,7 +1188,16 @@ mpRedirectButton?.addEventListener('click', () => {
   showMercadoPagoConfirmation({ scroll: true });
 });
 
-mpQrContinue?.addEventListener('click', () => showMercadoPagoConfirmation());
+mpQrContinue?.addEventListener('click', () => {
+  setPaymentCloseWarning(true);
+  registerPaidEnrollment(
+    'mercadopago_link',
+    'MercadoPagoLink',
+    'Mercado Pago',
+    mpQrContinue,
+    mpPaymentError
+  );
+});
 
 mpReopenButton?.addEventListener('click', () => {
   setPaymentCloseWarning(true);
@@ -1023,4 +1266,91 @@ window.addEventListener('pageshow', () => {
   }
 });
 
+
+// =========================================================
+// ECIS 116 — movimiento sutil y navegación
+// =========================================================
+function initializeArtDirection109() {
+  document.body.classList.add('is-ready');
+
+  const header = document.querySelector('#site-header') || document.querySelector('.site-header');
+  const syncHeader = () => header?.classList.toggle('is-scrolled', window.scrollY > 26);
+  syncHeader();
+  window.addEventListener('scroll', syncHeader, { passive: true });
+
+  const current = (location.pathname.split('/').pop() || 'index.html').split('?')[0];
+  document.querySelectorAll('.main-nav a[href]').forEach(link => {
+    const href = link.getAttribute('href') || '';
+    if (href === current) link.setAttribute('aria-current','page');
+  });
+
+  if (prefersReducedMotion()) {
+    document.querySelectorAll('.reveal,.lux-reveal').forEach(el => el.classList.add('is-revealed'));
+    return;
+  }
+
+  const targets = Array.from(document.querySelectorAll('.reveal,.value-item,.source-reference-card,.checkout-card,.contact-row,.experience-card,.profile-editorial,.admin-band,.philosophy-grid,.institution-band-grid,.masterclass-course-card,.formats-heading,.home-experience-inner,.page-banner-content,.contact-form-wrap'));
+  targets.forEach((element,index) => {
+    element.classList.add('lux-reveal');
+    element.style.setProperty('--reveal-delay', `${Math.min(index % 4, 3) * 70}ms`);
+  });
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-revealed');
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -3% 0px' });
+    targets.forEach(el => observer.observe(el));
+  } else targets.forEach(el => el.classList.add('is-revealed'));
+
+  const parallaxImages = Array.from(document.querySelectorAll('.hero-media img, .profile-editorial-image img, .course-image img'));
+  if (parallaxImages.length && window.matchMedia('(min-width: 701px)').matches) {
+    let ticking = false;
+    const update = () => {
+      const vh = window.innerHeight || 800;
+      parallaxImages.forEach(img => {
+        const holder = img.closest('.parallax-media');
+        if (!holder) return;
+        const rect = holder.getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > vh) return;
+        const progress = (rect.top + rect.height / 2 - vh / 2) / vh;
+        img.style.transform = `scale(1.035) translate3d(0, ${progress * -10}px, 0)`;
+      });
+      ticking = false;
+    };
+    window.addEventListener('scroll', () => {
+      if (!ticking) { requestAnimationFrame(update); ticking = true; }
+    }, { passive: true });
+    update();
+  }
+}
+
+function initializePremiumMicroInteractions() {
+  if (prefersReducedMotion()) return;
+  const finePointer = window.matchMedia?.('(hover:hover) and (pointer:fine)').matches;
+  if (!finePointer) return;
+
+  const cards = document.querySelectorAll('.experience-card-link,.masterclass-course-card:not(.masterclass-course-card-upcoming),.source-reference-card,.checkout-card,.contact-form-wrap');
+  cards.forEach(card => {
+    if (card.querySelector(':scope > .ecis-card-glow')) return;
+    const glow = document.createElement('span');
+    glow.className = 'ecis-card-glow';
+    glow.setAttribute('aria-hidden', 'true');
+    card.appendChild(glow);
+    card.addEventListener('pointermove', event => {
+      const rect = card.getBoundingClientRect();
+      card.style.setProperty('--pointer-x', `${event.clientX - rect.left}px`);
+      card.style.setProperty('--pointer-y', `${event.clientY - rect.top}px`);
+    });
+  });
+}
+
+whatsappProof?.addEventListener('click', () => setPaymentCloseWarning(false));
+emailProof?.addEventListener('click', () => setPaymentCloseWarning(false));
+initializeInputGuards();
+initializeNetworkStatus();
+initializeArtDirection109();
+initializePremiumMicroInteractions();
 initializePaymentPage();
