@@ -1689,3 +1689,75 @@ body.is-ready .home-banner-content>*:nth-child(4){animation-delay:.18s}
     background:none !important;
   }
 }
+
+/* =========================================================
+   ECIS 120 — banners con imagen completa
+   Todas las imágenes de banner comparten proporción 2079 × 756 (2.75:1).
+   Escritorio: el banner adopta esa proporción y el texto queda superpuesto.
+   Celular: la imagen completa ocupa una franja superior y el texto continúa debajo.
+   ========================================================= */
+
+:root{
+  --ecis-banner-ratio: 2.75;
+  --ecis-banner-height-mobile: calc(100vw / var(--ecis-banner-ratio));
+}
+
+/* Escritorio / tablet horizontal: nunca recortar la fotografía. */
+@media (min-width:701px){
+  .home-banner,
+  .page-banner{
+    min-height:0 !important;
+    aspect-ratio:2079 / 756;
+    background-size:100% auto !important;
+    background-position:center center !important;
+    background-repeat:no-repeat !important;
+  }
+
+  .contact-hero{
+    min-height:0 !important;
+    aspect-ratio:2079 / 756;
+    display:flex;
+    align-items:center;
+  }
+
+  .contact-hero::after{
+    inset:0 !important;
+    width:100% !important;
+    height:100% !important;
+    background-size:100% auto !important;
+    background-position:center center !important;
+    background-repeat:no-repeat !important;
+  }
+}
+
+/* Celular / pantalla angosta: fotografía completa y limpia arriba;
+   contenido textual debajo, sin crop ni deformación. */
+@media (max-width:700px){
+  .home-banner,
+  .page-banner{
+    min-height:0 !important;
+    aspect-ratio:auto !important;
+    padding-top:var(--ecis-banner-height-mobile) !important;
+    background-size:100% auto !important;
+    background-position:center top !important;
+    background-repeat:no-repeat !important;
+  }
+
+  .contact-hero{
+    min-height:0 !important;
+    aspect-ratio:auto !important;
+    padding-top:var(--ecis-banner-height-mobile) !important;
+  }
+
+  .contact-hero::after{
+    top:0 !important;
+    right:0 !important;
+    bottom:auto !important;
+    left:0 !important;
+    width:100% !important;
+    height:var(--ecis-banner-height-mobile) !important;
+    background-size:100% auto !important;
+    background-position:center top !important;
+    background-repeat:no-repeat !important;
+  }
+}
