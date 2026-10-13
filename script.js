@@ -18,9 +18,9 @@ const ECIS_EMAIL = 'ecis.ar.edu@gmail.com';
 // para evitar cobrar un monto incorrecto mediante un link fijo.
 const ECIS_MP_LINKS = {
   HM001: {
-    url: 'https://mpago.la/2QWYbxw',
+    url: 'https://mpago.la/2dTHfVg',
     qr: 'assets/images/mercadopago-link-qr.png',
-    amount: 15000
+    amount: 20000
   }
 };
 
