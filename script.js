@@ -10,7 +10,7 @@ const ECIS_REGISTRATION_ATTEMPT_PREFIX = 'ecis_registration_attempt_';
 const ECIS_PAYMENT_STAGE_KEY = 'ecis_payment_stage';
 const ECIS_EXPERIENCES_CACHE_KEY = 'ecis_experiences_cache_v1';
 const ECIS_EXPERIENCES_CACHE_TTL = 30 * 60 * 1000;
-const ECIS_WHATSAPP = '5401136741338';
+const ECIS_WHATSAPP = '5491173445804';
 const ECIS_EMAIL = 'ecis.ar.edu@gmail.com';
 
 // Cada link de Mercado Pago está asociado de forma explícita a una experiencia
