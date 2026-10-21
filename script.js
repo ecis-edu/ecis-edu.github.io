@@ -1,5 +1,5 @@
 // =========================================================
-// ECIS — clásica mejorada 117
+// ECIS — clásica mejorada 127
 // Base visual/textual pre-106 + movimiento sutil, acciones claras y tolerancia de red adaptativa
 // =========================================================
 
@@ -8,21 +8,14 @@ const ECIS_STORAGE_KEY = 'ecis_enrollment_draft';
 const ECIS_RESULT_KEY = 'ecis_enrollment_result';
 const ECIS_REGISTRATION_ATTEMPT_PREFIX = 'ecis_registration_attempt_';
 const ECIS_PAYMENT_STAGE_KEY = 'ecis_payment_stage';
-const ECIS_EXPERIENCES_CACHE_KEY = 'ecis_experiences_cache_v1';
+const ECIS_EXPERIENCES_CACHE_KEY = 'ecis_experiences_cache_v4';
 const ECIS_EXPERIENCES_CACHE_TTL = 30 * 60 * 1000;
 const ECIS_WHATSAPP = '5491173445804';
 const ECIS_EMAIL = 'ecis.ar.edu@gmail.com';
+const ECIS_MAX_AMOUNT = 1000000000;
 
-// Cada link de Mercado Pago está asociado de forma explícita a una experiencia
-// y a su importe. Si el importe de la hoja cambia, Mercado Pago se deshabilita
-// para evitar cobrar un monto incorrecto mediante un link fijo.
-const ECIS_MP_LINKS = {
-  HM001: {
-    url: 'https://mpago.la/2dTHfVg',
-    qr: 'assets/images/mercadopago-link-qr.png',
-    amount: 20000
-  }
-};
+// Mercado Pago se configura desde la pestaña Experiencias.
+// El link y el QR quedan congelados en cada inscripción para preservar el importe histórico.
 
 // =========================================================
 // Utilidades generales
@@ -34,7 +27,7 @@ document.querySelectorAll('#year').forEach(el => {
 
 function readJsonStorage(key) {
   try {
-    const raw = sessionStorage.getItem(key);
+    const raw = localStorage.getItem(key) || sessionStorage.getItem(key);
     return raw ? JSON.parse(raw) : null;
   } catch (_) {
     return null;
@@ -42,12 +35,13 @@ function readJsonStorage(key) {
 }
 
 function writeJsonStorage(key, value) {
-  try {
-    sessionStorage.setItem(key, JSON.stringify(value));
-  } catch (_) {}
+  const raw = JSON.stringify(value);
+  try { localStorage.setItem(key, raw); } catch (_) {}
+  try { sessionStorage.setItem(key, raw); } catch (_) {}
 }
 
 function removeStorage(key) {
+  try { localStorage.removeItem(key); } catch (_) {}
   try { sessionStorage.removeItem(key); } catch (_) {}
 }
 
@@ -91,9 +85,14 @@ function getRegistrationAttemptId(method) {
   }
 }
 
+function isValidEcisAmount(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 && number <= ECIS_MAX_AMOUNT;
+}
+
 function formatArs(value) {
   const number = Number(value);
-  if (!Number.isFinite(number)) return '—';
+  if (!isValidEcisAmount(number)) return '—';
   return `ARS $${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(number)}`;
 }
 
@@ -136,13 +135,12 @@ function getEnrollmentFullName(data) {
 }
 
 function getMpLinkConfig(data) {
-  const id = String(data?.experienciaId || '');
-  const config = ECIS_MP_LINKS[id];
-  if (!config) return null;
-
-  const amount = Number(data?.importe);
-  if (!Number.isFinite(amount) || amount !== Number(config.amount)) return null;
-  return config;
+  if (!data) return null;
+  const experience = findExperience?.(data.experienciaId) || null;
+  const url = String(data.mercadoPagoUrl || data.mpUrl || experience?.mercadoPagoUrl || '').trim();
+  const qr = String(data.mercadoPagoQr || data.mpQr || experience?.mercadoPagoQr || '').trim();
+  if (!url) return null;
+  return { url, qr };
 }
 
 function getNetworkProfile() {
@@ -219,6 +217,35 @@ function sanitizeDigits(value) {
   return String(value || '').replace(/\D+/g, '');
 }
 
+function sanitizeIdentityDocumentInput(value) {
+  return String(value || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9 .\-]/g, '')
+    .replace(/\s{2,}/g, ' ');
+}
+
+function normalizeIdentityDocument(value) {
+  return sanitizeIdentityDocumentInput(value).replace(/[^A-Z0-9]/g, '');
+}
+
+function sanitizeInternationalPhoneInput(value) {
+  const clean = String(value || '').replace(/[^0-9+()\- ]/g, '');
+  const firstPlus = clean.startsWith('+') ? '+' : '';
+  return firstPlus + clean.replace(/\+/g, '').replace(/\s{2,}/g, ' ');
+}
+
+function normalizeInternationalPhone(value) {
+  return String(value || '').replace(/\D+/g, '');
+}
+
+function isValidIdentityDocument(value) {
+  return /^[A-Z0-9]{4,25}$/.test(normalizeIdentityDocument(value));
+}
+
+function isValidInternationalPhone(value) {
+  return /^\d{7,15}$/.test(normalizeInternationalPhone(value));
+}
+
 function isValidPersonName(value) {
   const clean = String(value || '').trim();
   return /^[A-Za-zÀ-ÖØ-öø-ÿĀ-ž]+(?:[ '’\-][A-Za-zÀ-ÖØ-öø-ÿĀ-ž]+)*$/.test(clean);
@@ -250,8 +277,8 @@ function initializeInputGuards() {
   bindSanitizedInput(document.querySelector('#enroll-name'), sanitizePersonName, value => isValidPersonName(value) && value.trim().length >= 2, nameMessage);
   bindSanitizedInput(document.querySelector('#enroll-last-name'), sanitizePersonName, value => isValidPersonName(value) && value.trim().length >= 2, nameMessage);
   bindSanitizedInput(document.querySelector('#nombre'), sanitizePersonName, value => isValidPersonName(value) && value.trim().length >= 3, nameMessage);
-  bindSanitizedInput(document.querySelector('#enroll-dni'), sanitizeDigits, value => /^\d{6,12}$/.test(value), 'Escribí el DNI únicamente con números.');
-  bindSanitizedInput(document.querySelector('#enroll-phone'), sanitizeDigits, value => /^\d{8,15}$/.test(value), 'Escribí el teléfono únicamente con números e incluí el código de área.');
+  bindSanitizedInput(document.querySelector('#enroll-document'), sanitizeIdentityDocumentInput, isValidIdentityDocument, 'Ingresá un documento de identidad válido. Puede contener letras y números.');
+  bindSanitizedInput(document.querySelector('#enroll-phone'), sanitizeInternationalPhoneInput, isValidInternationalPhone, 'Ingresá un teléfono válido con código de país y de área.');
 }
 
 
@@ -261,8 +288,9 @@ function normalizeEnrollmentData(data) {
     ...data,
     nombre: sanitizePersonName(data.nombre).trim(),
     apellido: sanitizePersonName(data.apellido).trim(),
-    dni: sanitizeDigits(data.dni),
-    telefono: sanitizeDigits(data.telefono),
+    documento: normalizeIdentityDocument(data.documento ?? data.dni),
+    dni: normalizeIdentityDocument(data.documento ?? data.dni),
+    telefono: normalizeInternationalPhone(data.telefono),
     email: String(data.email || '').trim(),
     institucion: String(data.institucion || '').trim()
   };
@@ -412,20 +440,32 @@ contactForm?.addEventListener('submit', async event => {
 });
 
 // =========================================================
-// Inscripción — inscripcion.html
+// Aula ECIS — fechas, inscripción y pago simplificado 127
 // =========================================================
 
 const enrollmentForm = document.querySelector('#ecis-enrollment-form');
+const enrollmentSubmit = document.querySelector('#enrollment-submit');
 const experienceSelect = document.querySelector('#enroll-experience');
+const experienceSelectorWrap = document.querySelector('#experience-selector-wrap');
 const experienceHelp = document.querySelector('#experience-help');
 const experienceRetry = document.querySelector('#experience-retry');
 const enrollmentError = document.querySelector('#enrollment-error');
+const enrollmentStatus = document.querySelector('#enrollment-status');
+const editionPicker = document.querySelector('#edition-picker');
+const selectedExperienceSummary = document.querySelector('#selected-experience-summary');
+const masterclassEditions = document.querySelector('#hm001-editions');
+const masterclassDateCount = document.querySelector('#hm001-date-count');
+const masterclassPrice = document.querySelector('#hm001-price');
+const masterclassEditionsNote = document.querySelector('#hm001-editions-note');
+
+const registrationPostForm = document.querySelector('#ecis-registration-post');
+const registrationPostPayload = document.querySelector('#ecis-registration-payload');
 
 let loadedExperiences = [];
+let selectedEditionId = '';
+let registrationPostPromise = null;
 
 function loadExperiencesJsonp(timeoutMs = getNetworkProfile().requestTimeout) {
-  if (!experienceSelect) return Promise.resolve([]);
-
   return new Promise((resolve, reject) => {
     const callbackName = `ecisExperiencias_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const script = document.createElement('script');
@@ -448,9 +488,8 @@ function loadExperiencesJsonp(timeoutMs = getNetworkProfile().requestTimeout) {
       settled = true;
       window.clearTimeout(timeout);
       cleanup();
-
       if (!data || data.resultado !== 'ok' || !Array.isArray(data.experiencias)) {
-        reject(new Error(data?.mensaje || 'Actualizá la información de experiencias para continuar.'));
+        reject(new Error(data?.mensaje || 'No pudimos actualizar la disponibilidad.'));
         return;
       }
       resolve(data.experiencias);
@@ -461,7 +500,7 @@ function loadExperiencesJsonp(timeoutMs = getNetworkProfile().requestTimeout) {
       settled = true;
       window.clearTimeout(timeout);
       cleanup();
-      reject(new Error('La respuesta sigue en curso.'));
+      reject(new Error('No pudimos actualizar la disponibilidad.'));
     };
 
     const separator = ECIS_ENDPOINT.includes('?') ? '&' : '?';
@@ -471,380 +510,180 @@ function loadExperiencesJsonp(timeoutMs = getNetworkProfile().requestTimeout) {
   });
 }
 
-function renderExperiences(items, { preserveSelection = true } = {}) {
-  if (!experienceSelect) return;
-  const current = preserveSelection ? experienceSelect.value : '';
-  loadedExperiences = Array.isArray(items) ? items : [];
-  experienceSelect.innerHTML = '<option value="">Seleccioná una experiencia</option>';
+function findExperience(id) {
+  return loadedExperiences.find(item => String(item.id) === String(id)) || null;
+}
 
-  loadedExperiences.forEach(item => {
+function findEdition(experience, editionId) {
+  const edition = (experience?.ediciones || []).find(item => String(item.id) === String(editionId)) || null;
+  return edition && edition.disponible !== false ? edition : null;
+}
+
+function formatEditionLabel(edition) {
+  if (!edition) return '';
+  return [edition.fecha, edition.horario].filter(Boolean).join(' · ');
+}
+
+function renderMasterclassEditions() {
+  if (!masterclassEditions) return;
+  const experienceId = masterclassEditions.dataset.experienceId || 'HM001';
+  const experience = findExperience(experienceId);
+  const editions = Array.isArray(experience?.ediciones) ? experience.ediciones : [];
+  const available = editions.filter(edition => edition.disponible !== false);
+
+  if (masterclassPrice && experience?.importe) masterclassPrice.textContent = formatArs(experience.importe);
+  if (masterclassDateCount) {
+    masterclassDateCount.textContent = available.length
+      ? `${available.length} ${available.length === 1 ? 'fecha disponible' : 'fechas disponibles'}`
+      : 'Próximas fechas a confirmar';
+  }
+
+  if (!editions.length) {
+    masterclassEditions.innerHTML = '<div class="course-editions-empty"><strong>Próximas fechas a confirmar</strong><span>La inscripción se habilitará cuando publiquemos las nuevas ediciones.</span></div>';
+    if (masterclassEditionsNote) masterclassEditionsNote.textContent = 'No habilitamos pagos sin una fecha confirmada.';
+    return;
+  }
+
+  masterclassEditions.innerHTML = editions.map(edition => {
+    const extra = Number.isFinite(Number(edition.lugaresDisponibles)) && Number(edition.lugaresDisponibles) > 0 && Number(edition.lugaresDisponibles) <= 5
+      ? ` · ${Number(edition.lugaresDisponibles)} lugares`
+      : '';
+    if (edition.disponible === false) {
+      return `<div class="course-edition-option is-disabled" aria-disabled="true">
+        <span><strong>${escapeHtml(edition.fecha)}</strong><small>${escapeHtml(edition.horario || '')}${edition.modalidad ? ` · ${escapeHtml(edition.modalidad)}` : ''}</small></span>
+        <b>Completa</b>
+      </div>`;
+    }
+    return `<a class="course-edition-option" href="inscripcion.html?experiencia=${encodeURIComponent(experienceId)}&edicion=${encodeURIComponent(edition.id)}">
+      <span><strong>${escapeHtml(edition.fecha)}</strong><small>${escapeHtml(edition.horario || '')}${edition.modalidad ? ` · ${escapeHtml(edition.modalidad)}` : ''}${escapeHtml(extra)}</small></span>
+      <b>Inscribirme →</b>
+    </a>`;
+  }).join('');
+
+  if (masterclassEditionsNote) masterclassEditionsNote.textContent = available.length
+    ? 'Elegí la fecha que mejor se adapte a vos. La inscripción queda vinculada a esa edición.'
+    : 'Las fechas publicadas se encuentran completas por el momento.';
+}
+
+function renderExperienceSelect(items, preferredId = '') {
+  if (!experienceSelect) return;
+  experienceSelect.innerHTML = '<option value="">Seleccioná una actividad</option>';
+  items.forEach(item => {
     const option = document.createElement('option');
     option.value = String(item.id || '');
     option.textContent = String(item.nombre || '');
-    option.dataset.name = String(item.nombre || '');
-    option.dataset.type = String(item.tipo || '');
-    option.dataset.amount = String(item.importe ?? '');
     experienceSelect.appendChild(option);
   });
-
-  experienceSelect.disabled = !loadedExperiences.length;
-  if (current && loadedExperiences.some(item => String(item.id) === String(current))) {
-    experienceSelect.value = current;
-  }
-}
-
-function applyPreferredExperience() {
-  if (!experienceSelect || !loadedExperiences.length) return;
-  const draft = readJsonStorage(ECIS_STORAGE_KEY);
-  const requestedId = new URLSearchParams(window.location.search).get('experiencia');
-  const preferredId = requestedId || draft?.experienciaId || '';
-  if (preferredId && loadedExperiences.some(item => String(item.id) === String(preferredId))) {
+  experienceSelect.disabled = !items.length;
+  if (preferredId && items.some(item => String(item.id) === String(preferredId))) {
     experienceSelect.value = String(preferredId);
   }
 }
 
-function guideToEnrollmentIfRequested() {
-  const requestedId = new URLSearchParams(window.location.search).get('experiencia');
-  if (!requestedId) return;
-  window.setTimeout(() => {
-    const card = document.querySelector('#inscripcion-form');
-    smoothScrollTo(card, 'start');
-    const firstEmpty = Array.from(enrollmentForm?.querySelectorAll('input[required],select[required]') || [])
-      .find(field => !String(field.value || '').trim());
-    firstEmpty?.focus({ preventScroll: true });
-  }, 180);
+function renderSelectedExperience(experience, edition = null) {
+  if (!selectedExperienceSummary) return;
+  if (!experience) {
+    selectedExperienceSummary.hidden = true;
+    selectedExperienceSummary.innerHTML = '';
+    return;
+  }
+  selectedExperienceSummary.innerHTML = `
+    <div><span>Actividad</span><strong>${escapeHtml(experience.nombre)}</strong></div>
+    ${edition ? `<div><span>Fecha</span><strong>${escapeHtml(formatEditionLabel(edition))}</strong></div>` : ''}
+    ${edition ? `<div><span>Modalidad</span><strong>${escapeHtml(edition.modalidad || 'Virtual')}</strong></div>` : ''}
+    <div><span>Valor</span><strong>${escapeHtml(formatArs(experience.importe))}</strong></div>
+  `;
+  selectedExperienceSummary.hidden = false;
 }
 
-async function populateExperiences() {
-  if (!experienceSelect) return;
+function renderEditionPicker(experience, preferredEditionId = '') {
+  if (!editionPicker) return;
+  const editions = Array.isArray(experience?.ediciones) ? experience.ediciones : [];
+  const available = editions.filter(edition => edition.disponible !== false);
+  selectedEditionId = '';
 
+  if (!experience) {
+    editionPicker.innerHTML = '<p class="edition-picker-placeholder">Seleccioná una actividad para ver sus fechas.</p>';
+    return;
+  }
+
+  if (!editions.length) {
+    editionPicker.innerHTML = '<div class="edition-picker-empty"><strong>No hay fechas habilitadas por el momento.</strong><span>ECIS no permite avanzar al pago hasta que exista una fecha confirmada.</span></div>';
+    return;
+  }
+
+  editionPicker.innerHTML = editions.map((edition, index) => {
+    const selectable = edition.disponible !== false;
+    const firstAvailableId = available[0]?.id || '';
+    const checked = selectable && (String(edition.id) === String(preferredEditionId) || (!preferredEditionId && String(edition.id) === String(firstAvailableId)));
+    if (checked) selectedEditionId = String(edition.id);
+    return `
+      <label class="edition-option${checked ? ' is-selected' : ''}${!selectable ? ' is-disabled' : ''}">
+        <input type="radio" name="edicion" value="${escapeHtml(edition.id)}" ${checked ? 'checked' : ''} ${selectable ? '' : 'disabled'}/>
+        <span class="edition-date"><strong>${escapeHtml(edition.fecha)}</strong><small>${escapeHtml(edition.horario || '')}</small></span>
+        <span class="edition-mode">${selectable ? escapeHtml(edition.modalidad || 'Virtual') : 'Completa'}</span>
+      </label>
+    `;
+  }).join('');
+
+  editionPicker.querySelectorAll('input[name="edicion"]:not(:disabled)').forEach(input => {
+    input.addEventListener('change', () => {
+      selectedEditionId = String(input.value || '');
+      editionPicker.querySelectorAll('.edition-option').forEach(label => {
+        label.classList.toggle('is-selected', label.querySelector('input')?.checked === true);
+      });
+    });
+  });
+}
+
+async function loadAvailability() {
   const cached = readExperiencesCache();
-  if (cached.length) {
-    renderExperiences(cached, { preserveSelection: false });
-    applyPreferredExperience();
-    if (experienceHelp) experienceHelp.textContent = 'Experiencia lista. El importe se mostrará en el siguiente paso.';
-  } else {
-    experienceSelect.disabled = true;
-    experienceSelect.innerHTML = '<option value="">Cargando experiencias…</option>';
+  if (cached.length) loadedExperiences = cached;
+
+  let fresh = null;
+  try {
+    await waitForConnection();
+    fresh = await loadExperiencesJsonp();
+    loadedExperiences = fresh;
+    writeExperiencesCache(fresh);
+  } catch (_) {
+    if (!loadedExperiences.length) throw new Error('No pudimos consultar las fechas disponibles. Intentá nuevamente.');
   }
-
-  if (experienceRetry) experienceRetry.hidden = true;
-  setError(enrollmentError, '');
-
-  let lastError = null;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    try {
-      await waitForConnection();
-      const fresh = await loadExperiencesJsonp();
-      renderExperiences(fresh);
-      writeExperiencesCache(fresh);
-      applyPreferredExperience();
-      if (experienceHelp) {
-        experienceHelp.textContent = fresh.length
-          ? 'Experiencia lista. El importe se mostrará en el siguiente paso.'
-          : 'Las próximas experiencias se publicarán acá.';
-      }
-      guideToEnrollmentIfRequested();
-      return;
-    } catch (error) {
-      lastError = error;
-      if (cached.length) {
-        guideToEnrollmentIfRequested();
-        return;
-      }
-      await new Promise(resolve => window.setTimeout(resolve, adaptiveDelay(attempt)));
-    }
-  }
-
-  experienceSelect.innerHTML = '<option value="">Actualizá las experiencias</option>';
-  experienceSelect.disabled = true;
-  if (experienceHelp) experienceHelp.textContent = 'La conexión está tardando. Tocá “Actualizar experiencias” para continuar.';
-  if (experienceRetry) experienceRetry.hidden = false;
-  setError(enrollmentError, '');
+  return loadedExperiences;
 }
 
+async function initializeMasterclassDates() {
+  if (!masterclassEditions) return;
+  try {
+    await loadAvailability();
+    renderMasterclassEditions();
+  } catch (_) {
+    masterclassEditions.innerHTML = '<div class="course-editions-empty"><strong>No pudimos actualizar las fechas.</strong><span>Volvé a intentarlo en unos minutos.</span></div>';
+    if (masterclassDateCount) masterclassDateCount.textContent = 'Disponibilidad no disponible';
+  }
+}
 
 function restoreEnrollmentDraft() {
   if (!enrollmentForm) return;
   const draft = readJsonStorage(ECIS_STORAGE_KEY);
   if (!draft) return;
-
   const mapping = {
-    nombre: '#enroll-name',
-    apellido: '#enroll-last-name',
-    email: '#enroll-email',
-    dni: '#enroll-dni',
-    telefono: '#enroll-phone',
-    institucion: '#enroll-institution'
+    nombre: '#enroll-name', apellido: '#enroll-last-name', email: '#enroll-email',
+    documento: '#enroll-document', telefono: '#enroll-phone'
   };
-
   Object.entries(mapping).forEach(([key, selector]) => {
     const input = document.querySelector(selector);
-    if (input && draft[key] != null) input.value = draft[key];
+    const value = key === 'documento' ? (draft.documento ?? draft.dni) : draft[key];
+    if (input && value != null) input.value = value;
   });
-}
-
-if (enrollmentForm) {
-  restoreEnrollmentDraft();
-  populateExperiences();
-  experienceRetry?.addEventListener('click', populateExperiences);
-  window.addEventListener('online', () => { if (experienceSelect?.disabled) populateExperiences(); });
-
-  enrollmentForm.addEventListener('submit', event => {
-    event.preventDefault();
-    setError(enrollmentError, '');
-
-    if (!enrollmentForm.checkValidity()) {
-      enrollmentForm.reportValidity();
-      return;
-    }
-
-    const selected = experienceSelect?.selectedOptions?.[0];
-    if (!selected?.value) {
-      setError(enrollmentError, 'Seleccioná una experiencia para continuar.');
-      experienceSelect?.focus();
-      return;
-    }
-
-    const data = {
-      nombre: String(document.querySelector('#enroll-name')?.value || '').trim(),
-      apellido: String(document.querySelector('#enroll-last-name')?.value || '').trim(),
-      email: String(document.querySelector('#enroll-email')?.value || '').trim(),
-      dni: String(document.querySelector('#enroll-dni')?.value || '').trim(),
-      telefono: String(document.querySelector('#enroll-phone')?.value || '').trim(),
-      institucion: String(document.querySelector('#enroll-institution')?.value || '').trim(),
-      experienciaId: selected.value,
-      experiencia: selected.dataset.name || selected.textContent || '',
-      tipo: selected.dataset.type || '',
-      importe: Number(selected.dataset.amount || 0)
-    };
-
-    if (!data.experiencia || !Number.isFinite(data.importe) || data.importe <= 0) {
-      setError(enrollmentError, 'Actualizá las experiencias para continuar con los datos correctos.');
-      return;
-    }
-
-    // Cada envío del formulario inicia una inscripción nueva y limpia.
-    removeStorage(ECIS_RESULT_KEY);
-    clearRegistrationAttempts();
-    removeStorage(ECIS_PAYMENT_STAGE_KEY);
-    writeJsonStorage(ECIS_STORAGE_KEY, data);
-    window.location.href = 'pago.html';
-  });
-}
-
-// =========================================================
-// Pago — pago.html
-// =========================================================
-
-const paymentSummary = document.querySelector('#payment-summary');
-const paymentAmount = document.querySelector('#payment-amount');
-const transferAmount = document.querySelector('#transfer-amount');
-const paymentProceed = document.querySelector('#payment-proceed');
-const paymentMethodCard = document.querySelector('#payment-method-card');
-const transferCheckout = document.querySelector('#transfer-checkout');
-const paymentError = document.querySelector('#payment-error');
-const transferDone = document.querySelector('#transfer-done');
-const copyTransferAlias = document.querySelector('#copy-transfer-alias');
-const paymentFlow = document.querySelector('#payment-flow');
-const finishedPanel = document.querySelector('#registration-finished');
-const finalRegistrationCode = document.querySelector('#final-registration-code');
-const copyRegistrationCode = document.querySelector('#copy-registration-code');
-const whatsappProof = document.querySelector('#send-whatsapp-proof');
-const emailProof = document.querySelector('#send-email-proof');
-const postForm = document.querySelector('#ecis-registration-post');
-const postPayload = document.querySelector('#ecis-registration-payload');
-const paymentMethodInputs = Array.from(document.querySelectorAll('input[name="paymentMethod"]'));
-
-const mpCheckout = document.querySelector('#mp-checkout');
-const mpConfirmCheckout = document.querySelector('#mp-confirm-checkout');
-const mpCheckoutAmount = document.querySelector('#mp-checkout-amount');
-const mpPaymentError = document.querySelector('#mp-payment-error');
-const mpRedirectButton = document.querySelector('#mp-redirect-button');
-const mpHybridOptions = document.querySelector('#mp-hybrid-options');
-const mpDone = document.querySelector('#mp-done');
-const mpQrImage = document.querySelector('#mp-qr-image');
-const mpQrContinue = document.querySelector('#mp-qr-continue');
-const mpReopenButton = document.querySelector('#mp-reopen-button');
-const paymentBackButtons = Array.from(document.querySelectorAll('[data-payment-back]'));
-const mpConfirmBack = document.querySelector('#mp-confirm-back');
-const progressData = document.querySelector('#progress-data');
-const progressPayment = document.querySelector('#progress-payment');
-const progressProof = document.querySelector('#progress-proof');
-
-let paymentDraft = null;
-let registrationPostPromise = null;
-let paymentCloseWarningActive = false;
-
-function setPaymentCloseWarning(active) {
-  paymentCloseWarningActive = Boolean(active);
-}
-
-window.addEventListener('beforeunload', event => {
-  if (!paymentCloseWarningActive) return;
-  event.preventDefault();
-  event.returnValue = '';
-});
-
-function writePaymentStage(method, stage) {
-  if (!paymentDraft) return;
-  writeJsonStorage(ECIS_PAYMENT_STAGE_KEY, {
-    experienciaId: paymentDraft.experienciaId,
-    email: paymentDraft.email,
-    method,
-    stage
-  });
-}
-
-function readPaymentStage() {
-  const stored = readJsonStorage(ECIS_PAYMENT_STAGE_KEY);
-  if (!stored || !paymentDraft) return null;
-  if (stored.experienciaId !== paymentDraft.experienciaId) return null;
-  if (stored.email !== paymentDraft.email) return null;
-  return stored;
-}
-
-function clearPaymentStage() {
-  removeStorage(ECIS_PAYMENT_STAGE_KEY);
-  setPaymentCloseWarning(false);
-}
-
-function updateCheckoutProgress(stage = 'payment') {
-  [progressData, progressPayment, progressProof].forEach(item => item?.classList.remove('is-current', 'is-complete'));
-  progressData?.classList.add('is-complete');
-  if (stage === 'proof') {
-    progressPayment?.classList.add('is-complete');
-    progressProof?.classList.add('is-current');
-  } else {
-    progressPayment?.classList.add('is-current');
-  }
-}
-
-function setCheckoutVisibility({ choice = false, transfer = false, mp = false, mpConfirm = false } = {}) {
-  if (paymentMethodCard) paymentMethodCard.hidden = !choice;
-  if (transferCheckout) transferCheckout.hidden = !transfer;
-  if (mpCheckout) mpCheckout.hidden = !mp;
-  if (mpConfirmCheckout) mpConfirmCheckout.hidden = !mpConfirm;
-}
-
-function showPaymentChoice({ scroll = true } = {}) {
-  setCheckoutVisibility({ choice: true });
-  clearPaymentStage();
-  updateCheckoutProgress('payment');
-  if (scroll) smoothScrollTo(paymentMethodCard, 'start');
-}
-
-function showTransferStep({ scroll = true } = {}) {
-  setCheckoutVisibility({ transfer: true });
-  writePaymentStage('Transferencia', 'payment');
-  setPaymentCloseWarning(false);
-  updateCheckoutProgress('payment');
-  if (scroll) smoothScrollTo(transferCheckout, 'start');
-}
-
-function showMercadoPagoStep({ scroll = true } = {}) {
-  const config = getMpLinkConfig(paymentDraft);
-  if (!config) {
-    setError(mpPaymentError, 'Elegí transferencia para continuar con esta experiencia.');
-    return;
-  }
-  if (mpCheckoutAmount) mpCheckoutAmount.textContent = formatArs(paymentDraft?.importe);
-  if (mpRedirectButton) mpRedirectButton.href = config.url;
-  if (mpReopenButton) mpReopenButton.href = config.url;
-  if (mpQrImage) mpQrImage.src = config.qr;
-  if (mpHybridOptions) mpHybridOptions.hidden = false;
-  setCheckoutVisibility({ mp: true });
-  writePaymentStage('MercadoPago', 'payment');
-  setPaymentCloseWarning(false);
-  updateCheckoutProgress('payment');
-  if (scroll) smoothScrollTo(mpCheckout, 'start');
-}
-
-function showMercadoPagoConfirmation({ scroll = true } = {}) {
-  const config = getMpLinkConfig(paymentDraft);
-  if (!config) return;
-  if (mpReopenButton) mpReopenButton.href = config.url;
-  setCheckoutVisibility({ mpConfirm: true });
-  writePaymentStage('MercadoPago', 'confirm');
-  setPaymentCloseWarning(true);
-  updateCheckoutProgress('payment');
-  if (scroll) smoothScrollTo(mpConfirmCheckout, 'start');
-}
-
-function renderPaymentSummary(data) {
-  if (!paymentSummary) return;
-
-  const rows = [
-    ['Nombre y apellido', getEnrollmentFullName(data)],
-    ['Correo electrónico', data.email],
-    ['DNI', data.dni],
-    ['Teléfono', data.telefono],
-    ['Institución / Organización', data.institucion || 'Información opcional'],
-    ['Curso / Experiencia', data.experiencia]
-  ];
-
-  paymentSummary.innerHTML = rows.map(([label, value]) => `
-    <div class="checkout-summary-row">
-      <span>${escapeHtml(label)}</span>
-      <strong>${escapeHtml(value)}</strong>
-    </div>
-  `).join('');
-}
-
-function buildProofLinks(code, data, method = 'Transferencia') {
-  const isMp = method === 'MercadoPagoLink';
-  const methodName = isMp ? 'Mercado Pago' : 'transferencia';
-
-  const whatsappText = [
-    `Hola ECIS. Realicé el pago mediante ${methodName}.`,
-    '',
-    `Código de inscripción: ${code}`,
-    `Experiencia: ${data.experiencia}`,
-    `Importe: ${formatArs(data.importe)}`,
-    '',
-    'Adjunto el comprobante de pago.'
-  ].join('\n');
-
-  const emailSubject = `Comprobante de pago — ${code}`;
-  const emailBody = [
-    'Hola ECIS:',
-    '',
-    `Realicé el pago mediante ${methodName}.`,
-    `Código de inscripción: ${code}`,
-    `Experiencia: ${data.experiencia}`,
-    `Importe: ${formatArs(data.importe)}`,
-    `Nombre y apellido: ${getEnrollmentFullName(data)}`,
-    '',
-    'Adjunto el comprobante de pago.',
-    '',
-    'Saludos.'
-  ].join('\n');
-
-  const whatsappHref = `https://wa.me/${ECIS_WHATSAPP}?text=${encodeURIComponent(whatsappText)}`;
-  const emailHref = `mailto:${ECIS_EMAIL}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
-
-  if (whatsappProof) whatsappProof.href = whatsappHref;
-  if (emailProof) emailProof.href = emailHref;
-}
-
-function showFinishedState(code, data, method = 'Transferencia') {
-  if (!finishedPanel || !paymentFlow) return;
-  if (finalRegistrationCode) finalRegistrationCode.textContent = code;
-  buildProofLinks(code, data, method);
-  removeStorage(ECIS_PAYMENT_STAGE_KEY);
-  setPaymentCloseWarning(true);
-  updateCheckoutProgress('proof');
-  paymentFlow.hidden = true;
-  finishedPanel.hidden = false;
-  smoothScrollTo(finishedPanel, 'start');
 }
 
 function submitRegistrationThroughIframe(payload) {
-  if (!postForm || !postPayload) throw new Error('Recargá esta página para preparar nuevamente el registro.');
-  postForm.action = ECIS_ENDPOINT;
-  postForm.target = 'ecis-registration-frame';
-  postPayload.value = JSON.stringify(payload);
-  postForm.submit();
+  if (!registrationPostForm || !registrationPostPayload) throw new Error('Recargá esta página para continuar.');
+  registrationPostForm.action = ECIS_ENDPOINT;
+  registrationPostForm.target = 'ecis-registration-frame';
+  registrationPostPayload.value = JSON.stringify(payload);
+  registrationPostForm.submit();
 }
 
 function consultarRegistroJsonp(registroId, timeoutMs = getNetworkProfile().requestTimeout) {
@@ -852,35 +691,22 @@ function consultarRegistroJsonp(registroId, timeoutMs = getNetworkProfile().requ
     const callbackName = `ecisRegistro_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const script = document.createElement('script');
     let settled = false;
-
     const cleanup = () => {
       try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
       script.remove();
     };
-
     const timeout = window.setTimeout(() => {
       if (settled) return;
-      settled = true;
-      cleanup();
-      reject(new Error('La conexión sigue en curso.'));
+      settled = true; cleanup(); reject(new Error('La conexión sigue en curso.'));
     }, timeoutMs);
-
     window[callbackName] = data => {
       if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      cleanup();
-      resolve(data || { resultado: 'pendiente' });
+      settled = true; window.clearTimeout(timeout); cleanup(); resolve(data || { resultado: 'pendiente' });
     };
-
     script.onerror = () => {
       if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      cleanup();
-      reject(new Error('La respuesta sigue en curso.'));
+      settled = true; window.clearTimeout(timeout); cleanup(); reject(new Error('La respuesta sigue en curso.'));
     };
-
     const separator = ECIS_ENDPOINT.includes('?') ? '&' : '?';
     script.src = `${ECIS_ENDPOINT}${separator}accion=consultar_registro&registroId=${encodeURIComponent(registroId)}&callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
     script.async = true;
@@ -888,321 +714,491 @@ function consultarRegistroJsonp(registroId, timeoutMs = getNetworkProfile().requ
   });
 }
 
-async function esperarRegistroPorConsulta(registroId, totalMs = getNetworkProfile().registrationWindow, onProgress = () => {}) {
+async function waitForRegistration(registroId, predicate, totalMs = getNetworkProfile().registrationWindow, onProgress = () => {}) {
   const startedAt = Date.now();
   let attempt = 0;
-  let serverError = null;
-
   while (Date.now() - startedAt < totalMs) {
     await waitForConnection();
-    const elapsed = Date.now() - startedAt;
-    onProgress(elapsed);
-
+    onProgress(Date.now() - startedAt);
     try {
       const data = await consultarRegistroJsonp(registroId);
-      if (data?.resultado === 'ok' && data?.codigo) return data;
-      if (data?.resultado === 'error') {
-        serverError = new Error(data.mensaje || 'ECIS necesita revisar los datos de la inscripción.');
-        break;
-      }
-    } catch (_) {
-      // Una consulta lenta se reintenta automáticamente. El registro conserva el mismo UUID.
+      if (data?.resultado === 'error') throw new Error(data.mensaje || 'ECIS necesita revisar la inscripción.');
+      if (data?.resultado === 'ok' && predicate(data)) return data;
+    } catch (error) {
+      if (error?.message && !/curso|conexión|respuesta/i.test(error.message)) throw error;
     }
-
-    await new Promise(resolve => window.setTimeout(resolve, adaptiveDelay(attempt)));
-    attempt += 1;
+    await new Promise(resolve => window.setTimeout(resolve, adaptiveDelay(attempt++)));
   }
-
-  if (serverError) throw serverError;
-  const recoverable = new Error('Tu inscripción sigue guardada en este dispositivo. Cuando tengas conexión, tocá “Recuperar mi código” para continuar.');
-  recoverable.recoverable = true;
-  throw recoverable;
+  const error = new Error('La inscripción quedó guardada. Podés reintentar sin duplicarla.');
+  error.recoverable = true;
+  throw error;
 }
 
-function postRegistrationAndWait(payload, onProgress = () => {}) {
+function postActionAndWait(payload, predicate, onProgress = () => {}) {
   if (registrationPostPromise) return registrationPostPromise;
-
   registrationPostPromise = new Promise((resolve, reject) => {
     let settled = false;
-
     const finish = (handler, value) => {
       if (settled) return;
       settled = true;
       window.removeEventListener('message', onMessage);
       handler(value);
     };
-
     const onMessage = event => {
       const data = event?.data;
       if (!data || data.source !== 'ecis-registration') return;
-      if (String(data.registroId || '') !== String(payload.registroId || '')) return;
-
-      if (data.resultado === 'ok' && data.codigo) {
-        finish(resolve, data);
-        return;
-      }
-
-      if (data.resultado === 'error') {
-        finish(reject, new Error(data.mensaje || 'ECIS necesita revisar la inscripción.'));
-      }
+      const responseRequestId = String(data.solicitudRegistroId || data.registroId || '');
+      if (responseRequestId !== String(payload.registroId || '')) return;
+      if (data.resultado === 'error') { finish(reject, new Error(data.mensaje || 'No pudimos continuar.')); return; }
+      if (data.resultado === 'ok' && predicate(data)) finish(resolve, data);
     };
-
     window.addEventListener('message', onMessage);
-
-    try {
-      submitRegistrationThroughIframe(payload);
-    } catch (error) {
-      finish(reject, error);
-      return;
-    }
-
-    // Respaldo robusto: aunque el iframe termine en Apps Script y el navegador
-    // no reciba el postMessage, consultamos el registro por su UUID hasta
-    // recuperar el mismo código ya guardado en la planilla.
-    esperarRegistroPorConsulta(payload.registroId, getNetworkProfile().registrationWindow, onProgress)
+    try { submitRegistrationThroughIframe(payload); }
+    catch (error) { finish(reject, error); return; }
+    waitForRegistration(payload.registroId, predicate, getNetworkProfile().registrationWindow, onProgress)
       .then(data => finish(resolve, data))
       .catch(error => finish(reject, error));
-  }).finally(() => {
-    registrationPostPromise = null;
-  });
-
+  }).finally(() => { registrationPostPromise = null; });
   return registrationPostPromise;
 }
 
-function getPreviousResultForDraft() {
-  const previous = readJsonStorage(ECIS_RESULT_KEY);
-  if (!previous || !paymentDraft) return null;
-  if (previous.experienciaId !== paymentDraft.experienciaId) return null;
-  if (previous.email !== paymentDraft.email) return null;
-  return previous;
-}
+async function initializeEnrollmentPage() {
+  if (!enrollmentForm || !experienceSelect) return;
+  restoreEnrollmentDraft();
+  const params = new URLSearchParams(window.location.search);
+  const savedDraft = readJsonStorage(ECIS_STORAGE_KEY);
+  const requestedExperience = params.get('experiencia') || savedDraft?.experienciaId || '';
+  const requestedEdition = params.get('edicion') || savedDraft?.edicionId || '';
+  const hasPublishedSelection = Boolean(params.get('experiencia') && params.get('edicion'));
 
-function configureMpAvailability() {
-  const mpInput = paymentMethodInputs.find(input => input.value === 'MercadoPago');
-  if (!mpInput || !paymentDraft) return;
-
-  const config = getMpLinkConfig(paymentDraft);
-  const methodCard = mpInput.closest('.payment-method');
-  const helper = methodCard?.querySelector('small');
-
-  if (!config) {
-    mpInput.disabled = true;
-    methodCard?.classList.add('is-disabled');
-    if (helper) helper.textContent = 'Disponible mediante transferencia';
-    if (mpInput.checked) {
-      const transferInput = paymentMethodInputs.find(input => input.value === 'Transferencia');
-      if (transferInput) transferInput.checked = true;
-    }
-    return;
+  // Si la persona llega desde una edición concreta de Aula ECIS, ocultamos
+  // desde el primer instante los controles de selección. Solo se vuelven a
+  // mostrar si esa edición no puede validarse.
+  if (hasPublishedSelection) {
+    if (experienceSelectorWrap) experienceSelectorWrap.hidden = true;
+    if (editionPicker) editionPicker.hidden = true;
+    if (experienceHelp) experienceHelp.hidden = true;
   }
-
-  mpInput.disabled = false;
-  methodCard?.classList.remove('is-disabled');
-  if (helper) helper.textContent = 'App de Mercado Pago, crédito, débito y medios disponibles';
-  if (mpQrImage) mpQrImage.src = config.qr;
-}
-
-function updatePaymentMethodSelection() {
-  paymentMethodInputs.forEach(input => {
-    input.closest('.payment-method')?.classList.toggle('is-selected', input.checked);
-  });
-
-  const selected = paymentMethodInputs.find(input => input.checked)?.value || 'Transferencia';
-  if (paymentProceed) {
-    paymentProceed.textContent = selected === 'MercadoPago'
-      ? 'Continuar con Mercado Pago →'
-      : 'Continuar con transferencia →';
-  }
-}
-
-function showMercadoPagoOptions() {
-  showMercadoPagoStep();
-}
-
-async function registerPaidEnrollment(action, methodKey, methodLabel, button, errorElement) {
-  if (!paymentDraft || !button) return;
-  setError(errorElement, '');
-
-  const previous = getPreviousResultForDraft();
-  if (previous?.medioPago === methodKey && previous?.codigo) {
-    showFinishedState(previous.codigo, paymentDraft, methodKey);
-    return;
-  }
-
-  const originalText = button.textContent;
-  let finalButtonText = originalText;
-  button.disabled = true;
-  button.textContent = 'Registrando inscripción…';
-
-  const updateProgress = elapsed => {
-    if (navigator.onLine === false) button.textContent = 'Esperando señal para continuar…';
-    else if (elapsed > 45000) button.textContent = 'Seguimos recuperando tu código…';
-    else if (elapsed > 15000) button.textContent = 'Conexión en curso…';
-    else if (elapsed > 3500) button.textContent = 'Recuperando tu código…';
-  };
 
   try {
-    const registroId = getRegistrationAttemptId(methodKey);
-    const payload = {
-      accion: action,
-      registroId,
-      nombre: paymentDraft.nombre,
-      apellido: paymentDraft.apellido || '',
-      dni: paymentDraft.dni,
-      email: paymentDraft.email,
-      telefono: paymentDraft.telefono,
-      institucion: paymentDraft.institucion || '',
-      experienciaId: paymentDraft.experienciaId
-    };
+    experienceSelect.disabled = true;
+    experienceSelect.innerHTML = '<option value="">Cargando actividad…</option>';
+    await loadAvailability();
+    const preferredExperience = requestedExperience || (loadedExperiences.length === 1 ? String(loadedExperiences[0].id) : '');
+    renderExperienceSelect(loadedExperiences, preferredExperience);
 
-    const response = await postRegistrationAndWait(payload, updateProgress);
-    const codigo = String(response?.codigo || '').trim();
-    if (!codigo) { const error = new Error('Tu inscripción quedó registrada. Tocá “Recuperar mi código” para mostrar el código y continuar.'); error.recoverable = true; throw error; }
+    const experience = findExperience(experienceSelect.value || preferredExperience);
+    const lockedEdition = findEdition(experience, requestedEdition);
+    const lockedFromPublishedDate = Boolean(experience && params.get('experiencia') && params.get('edicion') && lockedEdition);
 
-    writeJsonStorage(ECIS_RESULT_KEY, {
-      codigo,
-      experienciaId: paymentDraft.experienciaId,
-      email: paymentDraft.email,
-      medioPago: methodKey,
-      resultado: 'pendiente'
+    if (experience && params.get('experiencia')) {
+      experienceSelect.value = String(experience.id);
+      if (experienceSelectorWrap) experienceSelectorWrap.hidden = true;
+    }
+
+    if (lockedFromPublishedDate) {
+      selectedEditionId = String(lockedEdition.id);
+      renderSelectedExperience(experience, lockedEdition);
+      if (experienceSelectorWrap) experienceSelectorWrap.hidden = true;
+      if (editionPicker) {
+        editionPicker.hidden = true;
+        editionPicker.innerHTML = '';
+      }
+      if (experienceHelp) {
+        experienceHelp.hidden = true;
+        experienceHelp.textContent = '';
+      }
+      const title = document.querySelector('#enrollment-choice-title');
+      const copy = document.querySelector('#enrollment-choice-copy');
+      if (title) title.textContent = 'Tu actividad seleccionada';
+      if (copy) copy.textContent = 'Revisá la edición elegida y completá tus datos para continuar.';
+    } else {
+      if (experienceSelectorWrap) experienceSelectorWrap.hidden = false;
+      renderSelectedExperience(experience);
+      renderEditionPicker(experience, requestedEdition);
+      if (editionPicker) editionPicker.hidden = false;
+      if (experienceHelp) {
+        experienceHelp.hidden = false;
+        experienceHelp.textContent = experience?.ediciones?.length
+          ? 'Elegí una fecha para continuar.'
+          : 'Todavía no hay fechas habilitadas para esta actividad.';
+      }
+    }
+  } catch (error) {
+    setError(enrollmentError, error.message);
+    experienceSelect.innerHTML = '<option value="">No disponible</option>';
+    experienceSelect.disabled = true;
+    if (experienceRetry) experienceRetry.hidden = false;
+  }
+
+  experienceSelect.addEventListener('change', () => {
+    const experience = findExperience(experienceSelect.value);
+    renderSelectedExperience(experience);
+    if (editionPicker) editionPicker.hidden = false;
+    renderEditionPicker(experience, '');
+  });
+
+  experienceRetry?.addEventListener('click', () => window.location.reload());
+
+  enrollmentForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    setError(enrollmentError, '');
+    if (enrollmentStatus) { enrollmentStatus.hidden = true; enrollmentStatus.textContent = ''; }
+    if (!enrollmentForm.checkValidity()) { enrollmentForm.reportValidity(); return; }
+
+    const experience = findExperience(experienceSelect.value);
+    const edition = findEdition(experience, selectedEditionId);
+    if (!experience) { setError(enrollmentError, 'Seleccioná una actividad para continuar.'); return; }
+    if (!edition) { setError(enrollmentError, 'Seleccioná una fecha para continuar.'); smoothScrollTo(editionPicker, 'start'); return; }
+    if (!isValidEcisAmount(experience.importe)) {
+      setError(enrollmentError, 'No pudimos obtener correctamente el importe de esta actividad. No se realizó ningún registro. Comunicate con ECIS o intentá nuevamente más tarde.');
+      return;
+    }
+
+    const data = normalizeEnrollmentData({
+      nombre: document.querySelector('#enroll-name')?.value || '',
+      apellido: document.querySelector('#enroll-last-name')?.value || '',
+      email: document.querySelector('#enroll-email')?.value || '',
+      documento: document.querySelector('#enroll-document')?.value || '',
+      telefono: document.querySelector('#enroll-phone')?.value || '',
+      institucion: '',
+      experienciaId: experience.id,
+      experiencia: experience.nombre,
+      tipo: experience.tipo,
+      importe: Number(experience.importe),
+      edicionId: edition.id,
+      fecha: edition.fecha,
+      horario: edition.horario,
+      modalidad: edition.modalidad || 'Virtual'
     });
 
-    showFinishedState(codigo, paymentDraft, methodKey);
-  } catch (error) {
-    if (error?.recoverable) finalButtonText = 'Recuperar mi código →';
-    setError(errorElement, error?.message || `Tocá nuevamente el botón para continuar con ${methodLabel}.`);
-  } finally {
-    button.disabled = false;
-    button.textContent = finalButtonText;
-  }
-}
-
-async function recuperarRegistroPendienteAlCargar() {
-  if (!paymentDraft) return false;
-
-  const candidates = [
-    ['Transferencia', 'Transferencia'],
-    ['MercadoPagoLink', 'MercadoPagoLink']
-  ];
-
-  for (const [suffix, methodKey] of candidates) {
-    const storageKey = ECIS_REGISTRATION_ATTEMPT_PREFIX + suffix.toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
+    const attemptKey = ECIS_REGISTRATION_ATTEMPT_PREFIX + 'inscripcion';
+    const fingerprintKey = attemptKey + '_fingerprint';
+    const fingerprint = [data.email.toLowerCase(), data.documento, data.experienciaId, data.edicionId].join('|');
     let registroId = '';
     try {
-      registroId = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey) || '';
-      if (registroId && !localStorage.getItem(storageKey)) localStorage.setItem(storageKey, registroId);
+      const savedFingerprint = localStorage.getItem(fingerprintKey) || '';
+      if (savedFingerprint === fingerprint) registroId = localStorage.getItem(attemptKey) || '';
     } catch (_) {}
-    if (!registroId) continue;
+    if (!registroId) {
+      registroId = createRegistrationAttemptId();
+      try {
+        localStorage.setItem(attemptKey, registroId);
+        localStorage.setItem(fingerprintKey, fingerprint);
+      } catch (_) {}
+    }
+
+    const originalText = enrollmentSubmit?.textContent || 'Iniciar inscripción y continuar al pago →';
+    if (enrollmentSubmit) { enrollmentSubmit.disabled = true; enrollmentSubmit.textContent = 'Iniciando tu inscripción…'; }
 
     try {
-      const data = await consultarRegistroJsonp(registroId, getNetworkProfile().requestTimeout);
-      if (data?.resultado === 'ok' && data?.codigo) {
-        const codigo = String(data.codigo).trim();
-        writeJsonStorage(ECIS_RESULT_KEY, {
-          codigo,
-          experienciaId: paymentDraft.experienciaId,
-          email: paymentDraft.email,
-          medioPago: methodKey,
-          resultado: 'pendiente'
-        });
-        showFinishedState(codigo, paymentDraft, methodKey);
-        return true;
-      }
-    } catch (_) {}
-  }
+      const response = await postActionAndWait({
+        accion: 'crear_inscripcion', registroId,
+        nombre: data.nombre, apellido: data.apellido, documento: data.documento, dni: data.documento, email: data.email,
+        telefono: data.telefono, institucion: '', experienciaId: data.experienciaId, edicionId: data.edicionId
+      }, result => Boolean(result.codigo) && typeof result.emailEnviado === 'boolean', elapsed => {
+        if (!enrollmentSubmit) return;
+        if (navigator.onLine === false) enrollmentSubmit.textContent = 'Esperando conexión…';
+        else if (elapsed > 12000) enrollmentSubmit.textContent = 'Guardando tu inscripción…';
+      });
 
-  return false;
+      const canonicalRegistroId = String(response.registroId || registroId).trim();
+      data.registroId = canonicalRegistroId;
+      data.codigo = String(response.codigo || '').trim();
+      data.estado = String(response.estado || 'Pendiente de pago');
+      data.emailEnviado = response.emailEnviado !== false;
+      data.mercadoPagoUrl = String(response.mercadoPagoUrl || experience.mercadoPagoUrl || '').trim();
+      data.mercadoPagoQr = String(response.mercadoPagoQr || experience.mercadoPagoQr || '').trim();
+      writeJsonStorage(ECIS_STORAGE_KEY, data);
+      writeJsonStorage(ECIS_RESULT_KEY, { codigo: data.codigo, registroId: canonicalRegistroId, experienciaId: data.experienciaId, edicionId: data.edicionId, email: data.email, emailEnviado: data.emailEnviado });
+      try {
+        localStorage.removeItem(ECIS_REGISTRATION_ATTEMPT_PREFIX + 'inscripcion');
+        localStorage.removeItem(ECIS_REGISTRATION_ATTEMPT_PREFIX + 'inscripcion_fingerprint');
+      } catch (_) {}
+
+      if (data.estado === 'Confirmada') {
+        if (enrollmentStatus) {
+          enrollmentStatus.textContent = `Ya existe una inscripción confirmada para esta fecha (${data.codigo}). Te reenviamos la información al correo registrado.`;
+          enrollmentStatus.hidden = false;
+          smoothScrollTo(enrollmentStatus, 'center');
+        }
+        if (enrollmentSubmit) { enrollmentSubmit.disabled = true; enrollmentSubmit.textContent = 'Inscripción ya confirmada'; }
+        return;
+      }
+      if (data.estado === 'Comprobante recibido' || data.estado === 'Observada') {
+        if (enrollmentStatus) {
+          enrollmentStatus.textContent = data.estado === 'Comprobante recibido'
+            ? `Ya tenemos una inscripción para esta fecha y el comprobante está en revisión (${data.codigo}). Te reenviamos la información al correo registrado.`
+            : `Ya existe una inscripción para esta fecha que requiere revisión administrativa (${data.codigo}). Te reenviamos la información al correo registrado.`;
+          enrollmentStatus.hidden = false;
+          smoothScrollTo(enrollmentStatus, 'center');
+        }
+        if (enrollmentSubmit) { enrollmentSubmit.disabled = true; enrollmentSubmit.textContent = 'Inscripción encontrada'; }
+        return;
+      }
+      window.location.href = `pago.html?registro=${encodeURIComponent(canonicalRegistroId)}`;
+    } catch (error) {
+      setError(enrollmentError, error?.message || 'No pudimos generar tu inscripción. Volvé a intentarlo.');
+      if (enrollmentSubmit) { enrollmentSubmit.disabled = false; enrollmentSubmit.textContent = originalText; }
+    }
+  });
+}
+
+// =========================================================
+// Pago — pago.html
+// =========================================================
+
+const paymentLoading = document.querySelector('#payment-loading');
+const paymentFlow = document.querySelector('#payment-flow');
+const paymentLoadError = document.querySelector('#payment-load-error');
+const paymentStatusCard = document.querySelector('#payment-status-card');
+const paymentStatusTitle = document.querySelector('#payment-status-title');
+const paymentStatusText = document.querySelector('#payment-status-text');
+const paymentSummary = document.querySelector('#payment-summary');
+const paymentAmount = document.querySelector('#payment-amount');
+const transferAmount = document.querySelector('#transfer-amount');
+const paymentMethodCard = document.querySelector('#payment-method-card');
+const transferCheckout = document.querySelector('#transfer-checkout');
+const mpCheckout = document.querySelector('#mp-checkout');
+const mpProofCheckout = document.querySelector('#mp-proof-checkout');
+const chooseTransfer = document.querySelector('#choose-transfer');
+const chooseMp = document.querySelector('#choose-mp');
+const copyTransferAlias = document.querySelector('#copy-transfer-alias');
+const mpCheckoutAmount = document.querySelector('#mp-checkout-amount');
+const mpCheckoutCode = document.querySelector('#mp-checkout-code');
+const mpRedirectButton = document.querySelector('#mp-redirect-button');
+const mpQrImage = document.querySelector('#mp-qr-image');
+const mpQrContainer = document.querySelector('#mp-qr-container');
+const mpQrContinue = document.querySelector('#mp-qr-continue');
+const paymentBackButtons = Array.from(document.querySelectorAll('[data-payment-back]'));
+const paymentRegistrationCode = document.querySelector('#payment-registration-code');
+const copyPaymentCode = document.querySelector('#copy-payment-code');
+const paymentCodeHelp = document.querySelector('#payment-code-help');
+const paymentEdit = document.querySelector('#payment-edit');
+const transferWhatsappProof = document.querySelector('#transfer-whatsapp-proof');
+const transferEmailProof = document.querySelector('#transfer-email-proof');
+const mpWhatsappProof = document.querySelector('#mp-whatsapp-proof');
+const mpEmailProof = document.querySelector('#mp-email-proof');
+const progressPayment = document.querySelector('#progress-payment');
+const progressProof = document.querySelector('#progress-proof');
+
+let paymentDraft = null;
+
+function renderPaymentSummary(data) {
+  if (!paymentSummary) return;
+  const dateLine = [data.fecha, data.horario].filter(Boolean).join(' · ');
+  const rows = [
+    ['Actividad', data.experiencia],
+    ['Fecha', dateLine || '—'],
+    ['Modalidad', data.modalidad || 'Virtual'],
+    ['Importe', formatArs(data.importe)]
+  ];
+  paymentSummary.innerHTML = rows.map(([label, value]) => `
+    <div class="checkout-summary-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+  `).join('');
+}
+
+function getProofLinks(code, data, methodLabel) {
+  const dateLine = [data.fecha, data.horario].filter(Boolean).join(' · ');
+  const whatsappText = [
+    'Hola ECIS. Envío mi comprobante de pago para completar la inscripción.', '',
+    `N.º de inscripción: ${code}`,
+    `Nombre y apellido: ${getEnrollmentFullName(data)}`,
+    `Actividad: ${data.experiencia}`,
+    `Fecha: ${dateLine}`,
+    `Medio de pago: ${methodLabel}`,
+    `Importe: ${formatArs(data.importe)}`, '',
+    'Adjunto el comprobante de pago.'
+  ].join('\n');
+  const emailSubject = `Comprobante de pago — ${code}`;
+  const emailBody = [
+    'Hola ECIS:', '', 'Envío mi comprobante de pago para completar la inscripción.', '',
+    `N.º de inscripción: ${code}`,
+    `Nombre y apellido: ${getEnrollmentFullName(data)}`,
+    `Actividad: ${data.experiencia}`,
+    `Fecha: ${dateLine}`,
+    `Medio de pago: ${methodLabel}`,
+    `Importe: ${formatArs(data.importe)}`, '', 'Adjunto el comprobante de pago.'
+  ].join('\n');
+  return {
+    whatsapp: `https://wa.me/${ECIS_WHATSAPP}?text=${encodeURIComponent(whatsappText)}`,
+    email: `mailto:${ECIS_EMAIL}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`
+  };
+}
+
+function configureProofLinks(methodKey, methodLabel, whatsappLink, emailLink) {
+  if (!paymentDraft || !whatsappLink || !emailLink) return;
+  const links = getProofLinks(paymentDraft.codigo, paymentDraft, methodLabel);
+  whatsappLink.href = links.whatsapp;
+  emailLink.href = links.email;
+  const mark = () => {
+    try {
+      submitRegistrationThroughIframe({ accion: 'marcar_pago', registroId: paymentDraft.registroId, medioPago: methodKey });
+      updatePaymentProgress(true);
+    } catch (_) {}
+  };
+  whatsappLink.onclick = mark;
+  emailLink.onclick = mark;
+}
+
+function updatePaymentProgress(proof = false) {
+  progressPayment?.classList.toggle('is-current', !proof);
+  progressPayment?.classList.toggle('is-complete', proof);
+  progressProof?.classList.toggle('is-current', proof);
+}
+
+function showPaymentChoice() {
+  if (paymentMethodCard) paymentMethodCard.hidden = false;
+  if (transferCheckout) transferCheckout.hidden = true;
+  if (mpCheckout) mpCheckout.hidden = true;
+  if (mpProofCheckout) mpProofCheckout.hidden = true;
+  removeStorage(ECIS_PAYMENT_STAGE_KEY);
+  updatePaymentProgress(false);
+  smoothScrollTo(paymentMethodCard, 'start');
+}
+
+function showTransferStep() {
+  if (paymentMethodCard) paymentMethodCard.hidden = true;
+  if (transferCheckout) transferCheckout.hidden = false;
+  if (mpCheckout) mpCheckout.hidden = true;
+  if (mpProofCheckout) mpProofCheckout.hidden = true;
+  removeStorage(ECIS_PAYMENT_STAGE_KEY);
+  configureProofLinks('Transferencia', 'Transferencia', transferWhatsappProof, transferEmailProof);
+  smoothScrollTo(transferCheckout, 'start');
+}
+
+function showMpStep() {
+  const config = getMpLinkConfig(paymentDraft);
+  if (!config) { setError(paymentLoadError, 'Mercado Pago no está disponible para esta actividad. Podés utilizar transferencia.'); return; }
+  if (mpRedirectButton) mpRedirectButton.href = config.url;
+  if (mpQrContainer) mpQrContainer.hidden = !config.qr;
+  if (mpQrImage && config.qr) mpQrImage.src = config.qr;
+  if (paymentMethodCard) paymentMethodCard.hidden = true;
+  if (transferCheckout) transferCheckout.hidden = true;
+  if (mpProofCheckout) mpProofCheckout.hidden = true;
+  if (mpCheckout) mpCheckout.hidden = false;
+  removeStorage(ECIS_PAYMENT_STAGE_KEY);
+  smoothScrollTo(mpCheckout, 'start');
+}
+
+function showMpProofStep({ persist = true } = {}) {
+  if (!paymentDraft) return;
+  if (paymentMethodCard) paymentMethodCard.hidden = true;
+  if (transferCheckout) transferCheckout.hidden = true;
+  if (mpCheckout) mpCheckout.hidden = true;
+  if (mpProofCheckout) mpProofCheckout.hidden = false;
+  configureProofLinks('MercadoPagoLink', 'Mercado Pago', mpWhatsappProof, mpEmailProof);
+  updatePaymentProgress(true);
+  if (persist) {
+    writeJsonStorage(ECIS_PAYMENT_STAGE_KEY, {
+      registroId: paymentDraft.registroId,
+      stage: 'mp-proof'
+    });
+  }
+  smoothScrollTo(mpProofCheckout, 'start');
+}
+
+async function recoverPaymentDraft(registroId) {
+  const stored = normalizeEnrollmentData(readJsonStorage(ECIS_STORAGE_KEY));
+  try {
+    const server = await consultarRegistroJsonp(registroId, getNetworkProfile().requestTimeout);
+    if (!server || server.resultado !== 'ok' || !server.codigo) throw new Error(server?.mensaje || 'No pudimos recuperar esta inscripción.');
+    if (!isValidEcisAmount(server.importe)) throw new Error('El importe de esta inscripción no es válido. ECIS debe corregirlo antes de continuar con el pago.');
+    const data = normalizeEnrollmentData({
+      registroId: server.registroId || registroId,
+      codigo: server.codigo,
+      estado: server.estado || 'Pendiente de pago',
+      nombre: server.nombre || '',
+      apellido: server.apellido || '',
+      email: server.email || '',
+      documento: server.documento || server.dni || '', dni: server.documento || server.dni || '', telefono: server.telefono || '', institucion: '',
+      experienciaId: server.experienciaId,
+      experiencia: server.experiencia,
+      tipo: server.tipo || '',
+      importe: Number(server.importe || 0),
+      edicionId: server.edicionId,
+      fecha: server.fecha,
+      horario: server.horario,
+      modalidad: server.modalidad || 'Virtual',
+      medioPago: server.medioPago || '',
+      medioPagoClave: server.medioPagoClave || '',
+      comprobante: server.comprobante || '',
+      mercadoPagoUrl: server.mercadoPagoUrl || '',
+      mercadoPagoQr: server.mercadoPagoQr || '',
+      emailEnviado: server.emailEnviado !== false
+    });
+    writeJsonStorage(ECIS_STORAGE_KEY, data);
+    return data;
+  } catch (error) {
+    if (stored?.registroId === registroId && stored?.codigo && isValidEcisAmount(stored?.importe)) return stored;
+    throw error;
+  }
 }
 
 async function initializePaymentPage() {
-  if (!paymentSummary) return;
-
-  paymentDraft = normalizeEnrollmentData(readJsonStorage(ECIS_STORAGE_KEY));
-  if (paymentDraft) writeJsonStorage(ECIS_STORAGE_KEY, paymentDraft);
-  if (!paymentDraft?.experienciaId) {
+  if (!paymentLoading) return;
+  const params = new URLSearchParams(window.location.search);
+  const stored = readJsonStorage(ECIS_STORAGE_KEY);
+  const registroId = params.get('registro') || stored?.registroId || '';
+  if (!registroId) {
     window.location.replace('inscripcion.html');
     return;
   }
 
-  renderPaymentSummary(paymentDraft);
-  if (paymentAmount) paymentAmount.textContent = formatArs(paymentDraft.importe);
-  if (transferAmount) transferAmount.textContent = formatArs(paymentDraft.importe);
-  if (mpCheckoutAmount) mpCheckoutAmount.textContent = formatArs(paymentDraft.importe);
+  try {
+    paymentDraft = await recoverPaymentDraft(registroId);
+    if (!paymentDraft?.codigo || !paymentDraft?.experienciaId || !paymentDraft?.edicionId) throw new Error('Faltan datos para continuar con esta inscripción.');
+    if (!isValidEcisAmount(paymentDraft.importe)) throw new Error('El importe de esta inscripción no es válido. ECIS debe corregirlo antes de continuar con el pago.');
 
-  configureMpAvailability();
+    if (['Confirmada', 'Comprobante recibido', 'Observada'].includes(paymentDraft.estado)) {
+      paymentLoading.hidden = true;
+      if (paymentStatusCard) paymentStatusCard.hidden = false;
+      if (paymentStatusTitle) paymentStatusTitle.textContent = paymentDraft.estado === 'Confirmada' ? 'Tu inscripción ya está confirmada' : (paymentDraft.estado === 'Comprobante recibido' ? 'Tu comprobante está en revisión' : 'Tu inscripción está siendo revisada');
+      if (paymentStatusText) paymentStatusText.textContent = paymentDraft.estado === 'Confirmada'
+        ? `No necesitás realizar otro pago. Tu N.º de inscripción es ${paymentDraft.codigo}.`
+        : (paymentDraft.estado === 'Comprobante recibido'
+          ? `Ya registramos la recepción del comprobante para ${paymentDraft.codigo}. No necesitás volver a enviarlo salvo que ECIS te lo solicite.`
+          : `La inscripción ${paymentDraft.codigo} requiere una revisión administrativa. Si necesitás asistencia, podés comunicarte con ECIS.`);
+      return;
+    }
 
-  const previous = getPreviousResultForDraft();
-  if (previous?.codigo) {
-    showFinishedState(previous.codigo, paymentDraft, previous.medioPago || 'Transferencia');
-    return;
+    renderPaymentSummary(paymentDraft);
+    if (paymentRegistrationCode) paymentRegistrationCode.textContent = paymentDraft.codigo;
+    if (mpCheckoutCode) mpCheckoutCode.textContent = paymentDraft.codigo;
+    if (paymentAmount) paymentAmount.textContent = formatArs(paymentDraft.importe);
+    if (paymentEdit) paymentEdit.href = `inscripcion.html?experiencia=${encodeURIComponent(paymentDraft.experienciaId)}&edicion=${encodeURIComponent(paymentDraft.edicionId)}`;
+    if (transferAmount) transferAmount.textContent = formatArs(paymentDraft.importe);
+    if (mpCheckoutAmount) mpCheckoutAmount.textContent = formatArs(paymentDraft.importe);
+    if (paymentCodeHelp && paymentDraft.emailEnviado === false) {
+      paymentCodeHelp.textContent = 'Guardá este número de inscripción. No pudimos confirmar el envío por correo, pero tu inscripción ya fue iniciada.';
+    }
+    const config = getMpLinkConfig(paymentDraft);
+    if (chooseMp && !config) {
+      chooseMp.disabled = true;
+      chooseMp.classList.add('is-disabled');
+      const small = chooseMp.querySelector('small');
+      if (small) small.textContent = 'No disponible para esta actividad';
+    }
+    paymentLoading.hidden = true;
+    paymentFlow.hidden = false;
+
+    const savedPaymentStage = readJsonStorage(ECIS_PAYMENT_STAGE_KEY);
+    if (savedPaymentStage?.registroId === paymentDraft.registroId && savedPaymentStage?.stage === 'mp-proof') {
+      window.setTimeout(() => showMpProofStep({ persist: false }), 0);
+    }
+  } catch (error) {
+    paymentLoading.hidden = true;
+    setError(paymentLoadError, `${error.message} Volvé a iniciar la inscripción o escribinos si necesitás ayuda.`);
   }
-
-  if (await recuperarRegistroPendienteAlCargar()) return;
-
-  updatePaymentMethodSelection();
-  updateCheckoutProgress('payment');
-
-  const stage = readPaymentStage();
-  if (stage?.method === 'Transferencia' && stage?.stage === 'payment') {
-    showTransferStep({ scroll: false });
-    return;
-  }
-  if (stage?.method === 'MercadoPago' && stage?.stage === 'confirm') {
-    showMercadoPagoConfirmation({ scroll: false });
-    return;
-  }
-  if (stage?.method === 'MercadoPago' && stage?.stage === 'payment') {
-    showMercadoPagoStep({ scroll: false });
-    return;
-  }
-
-  setCheckoutVisibility({ choice: true });
 }
 
-paymentMethodInputs.forEach(input => {
-  input.addEventListener('change', () => {
-    updatePaymentMethodSelection();
-    setError(paymentError, '');
-    setError(mpPaymentError, '');
-  });
-});
-
-paymentProceed?.addEventListener('click', () => {
-  const selected = paymentMethodInputs.find(input => input.checked)?.value || 'Transferencia';
-  setError(paymentError, '');
-  setError(mpPaymentError, '');
-  if (selected === 'MercadoPago') {
-    showMercadoPagoStep();
-    return;
-  }
-  showTransferStep();
-});
-
-paymentBackButtons.forEach(button => {
-  button.addEventListener('click', () => showPaymentChoice());
-});
-
-mpConfirmBack?.addEventListener('click', () => showMercadoPagoStep());
-
+chooseTransfer?.addEventListener('click', showTransferStep);
+chooseMp?.addEventListener('click', () => { if (!chooseMp.disabled) showMpStep(); });
 mpRedirectButton?.addEventListener('click', () => {
-  showMercadoPagoConfirmation({ scroll: true });
+  window.setTimeout(() => showMpProofStep(), 120);
 });
-
-mpQrContinue?.addEventListener('click', () => {
-  setPaymentCloseWarning(true);
-  registerPaidEnrollment(
-    'mercadopago_link',
-    'MercadoPagoLink',
-    'Mercado Pago',
-    mpQrContinue,
-    mpPaymentError
-  );
-});
-
-mpReopenButton?.addEventListener('click', () => {
-  setPaymentCloseWarning(true);
-  writePaymentStage('MercadoPago', 'confirm');
-});
+mpQrContinue?.addEventListener('click', () => showMpProofStep());
+paymentBackButtons.forEach(button => button.addEventListener('click', showPaymentChoice));
 
 copyTransferAlias?.addEventListener('click', async () => {
   try {
@@ -1210,61 +1206,23 @@ copyTransferAlias?.addEventListener('click', async () => {
     const original = copyTransferAlias.textContent;
     copyTransferAlias.textContent = 'Copiado';
     window.setTimeout(() => { copyTransferAlias.textContent = original; }, 1600);
-  } catch (_) {
-    window.prompt('Copiá el alias:', 'lucas.eci');
-  }
+  } catch (_) { window.prompt('Copiá el alias:', 'lucas.eci'); }
 });
 
-copyRegistrationCode?.addEventListener('click', async () => {
-  const code = finalRegistrationCode?.textContent?.trim();
-  if (!code) return;
-
+async function copyCodeFrom(element, button) {
+  const code = element?.textContent?.trim();
+  if (!code || !button) return;
   try {
     await navigator.clipboard.writeText(code);
-    const original = copyRegistrationCode.textContent || 'Copiar código';
-    copyRegistrationCode.textContent = 'Código copiado';
-    window.setTimeout(() => { copyRegistrationCode.textContent = original; }, 1600);
-  } catch (_) {
-    window.prompt('Copiá tu código:', code);
-  }
-});
+    const original = button.textContent;
+    button.textContent = 'Número copiado';
+    window.setTimeout(() => { button.textContent = original; }, 1600);
+  } catch (_) { window.prompt('Copiá tu número de inscripción:', code); }
+}
+copyPaymentCode?.addEventListener('click', () => copyCodeFrom(paymentRegistrationCode, copyPaymentCode));
 
-transferDone?.addEventListener('click', () => {
-  registerPaidEnrollment(
-    'transferencia',
-    'Transferencia',
-    'transferencia',
-    transferDone,
-    paymentError
-  );
-});
-
-mpDone?.addEventListener('click', () => {
-  registerPaidEnrollment(
-    'mercadopago_link',
-    'MercadoPagoLink',
-    'Mercado Pago',
-    mpDone,
-    mpPaymentError
-  );
-});
-
-
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible' || !paymentDraft) return;
-  const stage = readPaymentStage();
-  if (stage?.method === 'MercadoPago' && stage?.stage === 'confirm' && finishedPanel?.hidden !== false) {
-    showMercadoPagoConfirmation({ scroll: true });
-  }
-});
-
-window.addEventListener('pageshow', () => {
-  if (!paymentDraft) return;
-  const stage = readPaymentStage();
-  if (stage?.method === 'MercadoPago' && stage?.stage === 'confirm' && finishedPanel?.hidden !== false) {
-    window.setTimeout(() => showMercadoPagoConfirmation({ scroll: true }), 80);
-  }
-});
+initializeMasterclassDates();
+initializeEnrollmentPage();
 
 
 // =========================================================
@@ -1347,8 +1305,6 @@ function initializePremiumMicroInteractions() {
   });
 }
 
-whatsappProof?.addEventListener('click', () => setPaymentCloseWarning(false));
-emailProof?.addEventListener('click', () => setPaymentCloseWarning(false));
 initializeInputGuards();
 initializeNetworkStatus();
 initializeArtDirection109();

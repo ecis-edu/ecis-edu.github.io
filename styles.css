@@ -16,6 +16,7 @@
   --shadow:0 18px 50px rgba(18,12,8,.10);
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:Arial,Helvetica,sans-serif;line-height:1.5;-webkit-text-size-adjust:100%}
 a{color:inherit}
@@ -151,7 +152,7 @@ button,input,textarea,select{font:inherit;font-size:16px}
 
 
 /* Contact */
-.contact-hero{position:relative;overflow:hidden;background:#f9f6f0;min-height:415px}.contact-hero::after{content:"";position:absolute;right:0;top:0;bottom:0;width:100%;background:url("assets/images/contacto-banner.webp") 50% 72%/cover no-repeat}
+.contact-hero{position:relative;overflow:hidden;background:#f9f6f0;min-height:415px}.contact-hero::after{content:"";position:absolute;right:0;top:0;bottom:0;width:100%;background:url("assets/images/contacto-banner.webp") center/cover no-repeat}
 .contact-hero .container{position:relative;z-index:3;padding-top:62px;padding-bottom:58px}.contact-hero h1{margin:0;font:400 clamp(52px,5vw,78px)/.98 Georgia,serif;letter-spacing:-.04em}.contact-hero h1 span{display:block;color:var(--burgundy)}.contact-hero .lead{max-width:530px}
 .contact-section{padding:36px 0 58px;background:#fff}.contact-grid{display:grid;grid-template-columns:.38fr .62fr;gap:0;border-top:1px solid var(--line)}
 .contact-info{padding:30px 46px 20px 0;border-right:1px solid var(--line)}.contact-form-wrap{padding:30px 0 20px 54px}
@@ -1691,9 +1692,386 @@ body.is-ready .home-banner-content>*:nth-child(4){animation-delay:.18s}
 }
 
 
-/* ECIS 123 — volver a banners delgados y bajar el encuadre solo en Contacto */
-@media (min-width:701px){
-  .contact-hero::after{
-    background-position:50% 72% !important;
+/* ECIS 125 — contacto: encuadre de escritorio conservado de banner123 */
+@media (min-width: 621px) {
+  .contact-hero::after { background-position: 50% 72%; }
+}
+
+
+/* =========================================================
+   ECIS 126 — inscripción simplificada + múltiples fechas
+   ========================================================= */
+.course-editions{display:grid;gap:9px;margin-top:18px}
+.course-editions-loading,.course-editions-note{margin:11px 0 0;color:#7d736a;font-size:12px;line-height:1.5}
+.course-edition-option{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 14px;border:1px solid #ddd3c9;border-radius:10px;background:#fff;color:inherit;text-decoration:none;transition:.18s ease}
+.course-edition-option:hover,.course-edition-option:focus-visible{border-color:var(--gold);background:#fbf7f1;transform:translateY(-1px)}
+.course-edition-option span{min-width:0}.course-edition-option strong{display:block;color:#302924;font-size:13px}.course-edition-option small{display:block;margin-top:3px;color:#867b72;font-size:11px}.course-edition-option b{flex:none;color:var(--burgundy);font-size:12px}
+.course-editions-empty,.edition-picker-empty{padding:15px 16px;border:1px solid #ded5cc;border-radius:10px;background:#faf8f5}.course-editions-empty strong,.edition-picker-empty strong{display:block;color:#3b342f;font-size:13px}.course-editions-empty span,.edition-picker-empty span{display:block;margin-top:4px;color:#81776f;font-size:11.5px;line-height:1.5}
+.enrollment-choice-card{padding-bottom:30px}.selected-experience-summary{display:grid;grid-template-columns:1fr auto;gap:16px;margin:18px 0;padding:16px 18px;border:1px solid rgba(116,16,24,.13);border-radius:12px;background:#fff9f8}.selected-experience-summary div{min-width:0}.selected-experience-summary span{display:block;margin-bottom:4px;color:#8a7e75;font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}.selected-experience-summary strong{display:block;color:#2e2723;font-size:14px}.selected-experience-summary div:last-child{text-align:right}.selected-experience-summary div:last-child strong{color:var(--burgundy)}
+#experience-selector-wrap.is-compact{display:none}.edition-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:18px}.edition-picker-placeholder{grid-column:1/-1;margin:0;color:#81776f;font-size:12px}.edition-option{position:relative;display:flex;flex-direction:column;gap:12px;min-height:112px;padding:16px;border:1px solid #d9cfc5;border-radius:12px;background:#fff;cursor:pointer;transition:.18s ease}.edition-option input{position:absolute;opacity:0;pointer-events:none}.edition-option:hover,.edition-option:focus-within{border-color:var(--gold);transform:translateY(-1px)}.edition-option.is-selected{border-color:var(--burgundy);box-shadow:0 0 0 1px var(--burgundy) inset;background:#fffafa}.edition-date strong{display:block;color:#302924;font-size:14px}.edition-date small{display:block;margin-top:5px;color:#746a62;font-size:11.5px}.edition-mode{margin-top:auto;color:var(--burgundy);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.payment-loading-card{text-align:center}.payment-loading-card p{color:#746a62}.registration-code-card{display:flex;align-items:center;justify-content:space-between;gap:20px}.registration-code-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.registration-code-card .final-registration-code{margin:3px 0 0}.registration-code-help{margin:10px 0 0;max-width:760px;color:#746a62;font-size:12px;line-height:1.5}.checkout-summary-compact .checkout-summary-row{grid-template-columns:160px minmax(0,1fr)}
+.payment-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.payment-action-card{appearance:none;width:100%;display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:12px;min-height:86px;padding:15px;border:1px solid #d8cfc5;border-radius:12px;background:#fff;text-align:left;cursor:pointer;transition:.18s ease}.payment-action-card:hover,.payment-action-card:focus-visible{border-color:var(--burgundy);box-shadow:0 0 0 1px rgba(116,16,24,.16) inset;transform:translateY(-1px)}.payment-action-card strong{display:block;color:#2f2925;font-size:13px}.payment-action-card small{display:block;margin-top:3px;color:#8b8178;font-size:10.5px}.payment-action-arrow{color:var(--burgundy);font-size:18px}.payment-action-card.is-disabled,.payment-action-card:disabled{opacity:.5;cursor:not-allowed;transform:none}.payment-action-card .payment-method-mark-mp{background:var(--burgundy);border-color:var(--burgundy);color:#fff}
+
+@media(max-width:760px){.edition-picker{grid-template-columns:1fr}.selected-experience-summary{grid-template-columns:1fr}.selected-experience-summary div:last-child{text-align:left}.payment-action-grid{grid-template-columns:1fr}.registration-code-card{display:block}.checkout-summary-compact .checkout-summary-row{grid-template-columns:1fr}.course-edition-option{align-items:flex-start}.course-edition-option b{padding-top:2px}}
+
+.proof-inline-block{margin-top:22px;padding:18px;border:1px solid rgba(116,16,24,.14);border-radius:12px;background:#fff9f8}.proof-inline-block p{margin:0 0 14px;color:#5f554e;font-size:12.5px;line-height:1.55}.proof-inline-block p strong{color:var(--burgundy)}.proof-inline-block small{display:block;margin-top:10px;color:#847970;font-size:10.5px}.proof-inline-block .success-contact-actions{margin-top:0}
+
+/* ECIS 127 — estados claros en inscripción */
+.checkout-info{margin:18px 0 0;padding:14px 16px;border-left:3px solid var(--gold);background:#fbf7ef;color:#4a4039;font-size:13px;line-height:1.55}
+.checkout-info[hidden],.payment-status-card[hidden]{display:none}
+.payment-status-card{text-align:left}.payment-status-card h2{margin:.2rem 0 .6rem}.payment-status-card p:not(.eyebrow){color:#6f655e;line-height:1.6}
+.course-edition-option.is-disabled{background:#f4f1ee;border-color:#e2ddd7;color:#8f8780;cursor:not-allowed;transform:none}
+.course-edition-option.is-disabled b{color:#8f8780}.course-edition-option.is-disabled:hover{background:#f4f1ee;border-color:#e2ddd7;transform:none}
+.edition-option.is-disabled{background:#f4f1ee;border-color:#e2ddd7;cursor:not-allowed;opacity:.8}.edition-option.is-disabled:hover{border-color:#e2ddd7;transform:none}.edition-option.is-disabled .edition-mode{color:#8f8780}
+
+
+/* =========================================================
+   ECIS 129 OFFLINE — depuración institucional y de contenidos
+   ========================================================= */
+
+/* Inicio */
+.home-values-heading{padding-top:30px;padding-bottom:2px}
+.home-values-heading .eyebrow{margin-bottom:0}
+.home-banner .hero-actions .button-outline{border-color:rgba(189,149,82,.85);background:rgba(255,255,255,.80);color:#5e451f}
+
+/* Tarjetas de formatos aún no publicados */
+.experience-card-upcoming-format{background:#fbf9f5;box-shadow:none;border-style:solid}
+.experience-card-upcoming-format .experience-card-image img{filter:saturate(.72);opacity:.82}
+.experience-card-upcoming-format .experience-card-icon{background:#766b63}
+.experience-upcoming-label{display:inline-flex;align-items:center;justify-content:center;margin-top:auto;padding:11px 15px;border:1px solid #ddd4c9;border-radius:999px;color:#766b63;background:#fff;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+
+/* Masterclass destacada */
+.masterclass-feature-card{background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden}
+.masterclass-feature-top{display:grid;grid-template-columns:minmax(280px,.78fr) minmax(0,1.22fr)}
+.masterclass-feature-image{min-height:560px;background:#e9e4dd;overflow:hidden}
+.masterclass-feature-image img{width:100%;height:100%;object-fit:cover;object-position:center}
+.masterclass-feature-main{padding:42px 46px 40px;display:flex;flex-direction:column}
+.masterclass-feature-main h2{margin:0;font:400 clamp(35px,4vw,54px)/1.03 Georgia,"Times New Roman",serif;letter-spacing:-.035em;color:var(--ink)}
+.masterclass-feature-main h2 span{display:block;color:var(--burgundy);font-style:italic}
+.masterclass-meta-feature{margin-top:10px}
+.masterclass-detail-grid{display:grid;grid-template-columns:1.25fr .9fr .85fr;border-top:1px solid var(--line)}
+.masterclass-detail-block{padding:34px 34px 38px;min-width:0}
+.masterclass-detail-block+.masterclass-detail-block{border-left:1px solid var(--line)}
+.masterclass-detail-block h3{margin:0 0 16px;font:400 28px/1.08 Georgia,"Times New Roman",serif;color:#2c2723}
+.masterclass-detail-block>p:not(.eyebrow):not(.masterclass-speaker-role):not(.masterclass-detail-note){margin:0 0 13px;color:#5b534c;font-size:14px;line-height:1.65}
+.masterclass-topic-list{margin:0;padding:0;list-style:none}
+.masterclass-topic-list li{position:relative;padding:0 0 13px 18px;color:#534b45;font-size:13.5px;line-height:1.55}
+.masterclass-topic-list li::before{content:"";position:absolute;left:0;top:.56em;width:6px;height:6px;border-radius:50%;background:var(--burgundy)}
+.masterclass-topic-list strong{color:#312a26}
+.masterclass-detail-note{margin:12px 0 0;padding-top:14px;border-top:1px solid #eee7de;color:#6b171b;font-size:12.5px;font-weight:700}
+.masterclass-speaker-role{margin:0 0 14px;color:var(--burgundy);font-size:13px;font-weight:700;line-height:1.45}
+.text-link{display:inline-flex;margin-top:8px;color:var(--burgundy);font-size:12px;font-weight:700;text-decoration:none;border-bottom:1px solid rgba(107,23,27,.25)}
+.text-link:hover,.text-link:focus-visible{border-bottom-color:var(--burgundy)}
+
+/* Inscripción y pago */
+.checkout-privacy a{color:var(--burgundy);font-weight:700;text-underline-offset:2px}
+.checkout-process-note,.payment-pending-note{margin:12px 0 0;color:#6e635a;font-size:11.5px;line-height:1.55;text-align:center}
+.payment-pending-note{padding:11px 14px;border:1px solid #e6ddd2;border-radius:10px;background:#fbf8f3}
+
+/* Páginas legales */
+.legal-hero{padding:64px 0 42px;background:linear-gradient(90deg,#fbfaf7,#f3ece3);border-bottom:1px solid var(--line)}
+.legal-narrow{max-width:900px}
+.legal-hero h1{margin:0;font:400 clamp(46px,5vw,68px)/1 Georgia,"Times New Roman",serif;letter-spacing:-.04em;color:var(--burgundy)}
+.legal-hero p:not(.eyebrow){margin:16px 0 0;max-width:720px;color:var(--muted);font-size:17px;line-height:1.6}
+.legal-section{padding:54px 0 70px}
+.legal-content h2{margin:34px 0 10px;font:400 29px/1.15 Georgia,"Times New Roman",serif;color:#2d2824}
+.legal-content h2:first-child{margin-top:0}
+.legal-content p{margin:0 0 14px;color:#524b45;font-size:15px;line-height:1.72}
+.legal-content a{color:var(--burgundy);font-weight:700;text-underline-offset:2px}
+.legal-updated{margin-top:36px!important;padding-top:18px;border-top:1px solid var(--line);color:#81776f!important;font-size:12px!important}
+
+/* Pie institucional */
+.footer-bottom-inner{display:flex!important;justify-content:space-between!important;align-items:center;gap:18px;flex-wrap:wrap}
+.footer-identity{display:flex;align-items:center;gap:.75em;flex-wrap:wrap}
+.footer-links{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.footer-links a{color:#b8aea5;text-decoration:none}
+.footer-links a:hover,.footer-links a:focus-visible{color:var(--gold-soft)}
+
+@media(max-width:860px){
+  .masterclass-feature-top{grid-template-columns:1fr}
+  .masterclass-feature-image{min-height:380px;max-height:540px}
+  .masterclass-detail-grid{grid-template-columns:1fr}
+  .masterclass-detail-block+.masterclass-detail-block{border-left:0;border-top:1px solid var(--line)}
+}
+@media(max-width:620px){
+  .home-values-heading{padding-top:24px}
+  .home-banner .hero-actions{display:grid;grid-template-columns:1fr}
+  .home-banner .hero-actions .button{width:100%}
+  .masterclass-feature-image{min-height:260px;max-height:340px}
+  .masterclass-feature-main{padding:25px 19px 27px}
+  .masterclass-feature-main h2{font-size:32px}
+  .masterclass-detail-block{padding:27px 19px 30px}
+  .masterclass-detail-block h3{font-size:25px}
+  .legal-hero{padding:44px 0 30px}
+  .legal-hero h1{font-size:40px}
+  .legal-section{padding:38px 0 52px}
+  .legal-content h2{font-size:25px}
+  .footer-bottom-inner{display:block!important}
+  .footer-identity{display:block}
+  .footer-links{margin-top:12px;gap:10px 14px}
+}
+
+/* =========================================================
+   ECIS 129.1 OFFLINE — compactación editorial + responsive integral
+   Objetivo: más contenido visible por pantalla, imágenes completas y
+   escalabilidad para futuras actividades sin perder identidad visual.
+   ========================================================= */
+
+/* --- Equipo ECIS: ficha más compacta y proporcional --- */
+.team-section .container{max-width:1180px}
+.team-header{margin-bottom:26px}
+.profile-editorial{
+  grid-template-columns:minmax(220px,285px) minmax(0,1fr);
+  min-height:0;
+  max-width:1080px;
+  margin:0 auto;
+  align-items:start;
+  border:1px solid var(--line);
+  box-shadow:0 10px 28px rgba(18,12,8,.06);
+}
+.profile-editorial-image{
+  min-height:0;
+  max-height:none;
+  aspect-ratio:4/5;
+  align-self:start;
+}
+.profile-editorial-image img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center top;
+}
+.profile-editorial-copy{padding:30px 34px 30px}
+.profile-editorial-copy h3{font-size:clamp(34px,3.1vw,48px)}
+.profile-role{margin-bottom:17px}
+.profile-editorial-copy>p:not(.eyebrow):not(.profile-role){margin-bottom:11px;font-size:14px;line-height:1.56}
+.admin-band{max-width:1080px;margin:26px auto 0;padding:24px 0 30px}
+
+/* --- Masterclass: estructura preparada para sumar futuras capacitaciones --- */
+.masterclass-catalog{padding:50px 0 62px}
+.masterclass-catalog-head{max-width:900px;margin-bottom:24px}
+.masterclass-catalog-head h1{font-size:clamp(38px,4.2vw,56px);line-height:.99}
+.masterclass-catalog-head>p:last-child{margin-top:14px;max-width:800px;font-size:15.5px;line-height:1.58}
+.masterclass-feature-list{display:grid;gap:28px}
+.masterclass-feature-card{max-width:1180px;width:100%;margin:0 auto}
+.masterclass-feature-top{
+  grid-template-columns:minmax(270px,340px) minmax(0,1fr);
+  align-items:start;
+}
+.masterclass-feature-image{
+  width:100%;
+  min-height:0;
+  max-height:none;
+  aspect-ratio:1/1;
+  display:grid;
+  place-items:center;
+  background:#f1ece5;
+  padding:16px;
+}
+.masterclass-feature-image img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center;
+}
+.masterclass-feature-main{padding:28px 32px 28px}
+.masterclass-feature-main h2{font-size:clamp(31px,3.1vw,43px);line-height:1.03}
+.masterclass-feature-main .masterclass-card-copy{margin:13px 0 17px;font-size:13.5px;line-height:1.56}
+.masterclass-meta-feature{margin-top:4px}
+.masterclass-meta-feature .masterclass-meta-item{padding:9px 0}
+.masterclass-meta-feature .masterclass-meta-item span{font-size:9px}
+.masterclass-meta-feature .masterclass-meta-item strong{font-size:12.5px}
+.masterclass-feature-main .course-editions{margin-top:13px}
+.masterclass-feature-main .course-editions-note{margin-top:8px}
+.masterclass-detail-grid{grid-template-columns:1.18fr .9fr .82fr}
+.masterclass-detail-block{padding:24px 26px 27px}
+.masterclass-detail-block h3{margin-bottom:12px;font-size:24px}
+.masterclass-topic-list li{padding-bottom:9px;font-size:12.8px;line-height:1.48}
+.masterclass-detail-block>p:not(.eyebrow):not(.masterclass-speaker-role):not(.masterclass-detail-note){font-size:13px;line-height:1.55}
+.masterclass-detail-note{margin-top:8px;padding-top:11px;font-size:12px}
+
+/* --- Responsive transversal --- */
+@media(max-width:1100px){
+  .container{width:min(calc(100% - 48px),var(--max))}
+  .profile-editorial{max-width:960px;grid-template-columns:minmax(210px,260px) minmax(0,1fr)}
+  .profile-editorial-copy{padding:27px 30px}
+  .masterclass-feature-card{max-width:980px}
+  .masterclass-feature-top{grid-template-columns:minmax(250px,315px) minmax(0,1fr)}
+  .masterclass-feature-main{padding:25px 28px}
+  .masterclass-detail-block{padding:22px 22px 25px}
+}
+
+@media(max-width:860px){
+  .container{width:min(calc(100% - 40px),var(--max))}
+
+  /* Equipo: fotografía deliberadamente más pequeña, no a ancho completo */
+  .profile-editorial{grid-template-columns:1fr;max-width:720px;padding-top:24px}
+  .profile-editorial-image{
+    width:min(42vw,260px);
+    min-width:210px;
+    margin:0 auto;
+    aspect-ratio:4/5;
   }
+  .profile-editorial-copy{padding:24px 28px 29px}
+  .profile-editorial-copy .eyebrow{text-align:center}
+  .profile-editorial-copy h3{text-align:center}
+  .profile-role{text-align:center}
+  .admin-band{max-width:720px}
+
+  /* Masterclass: la imagen completa queda centrada y contenida */
+  .masterclass-feature-card{max-width:760px}
+  .masterclass-feature-top{grid-template-columns:1fr}
+  .masterclass-feature-image{
+    width:min(72vw,360px);
+    margin:24px auto 0;
+    aspect-ratio:1/1;
+    padding:12px;
+  }
+  .masterclass-feature-main{padding:23px 27px 27px}
+  .masterclass-detail-grid{grid-template-columns:1fr 1fr}
+  .masterclass-detail-block+.masterclass-detail-block{border-left:1px solid var(--line);border-top:0}
+  .masterclass-detail-block.masterclass-speaker{grid-column:1/-1;border-left:0;border-top:1px solid var(--line)}
+}
+
+@media(max-width:700px){
+  .container{width:min(calc(100% - 30px),var(--max))}
+  .team-section{padding-top:40px}
+  .team-header{margin-bottom:20px}
+  .profile-editorial{padding-top:20px}
+  .profile-editorial-image{width:min(68vw,245px);min-width:0}
+  .profile-editorial-copy{padding:22px 20px 25px}
+  .profile-editorial-copy h3{font-size:34px}
+  .profile-editorial-copy>p:not(.eyebrow):not(.profile-role){font-size:13.5px;line-height:1.53}
+  .admin-band{margin-top:22px;padding:21px 0 26px}
+
+  .masterclass-catalog{padding:38px 0 48px}
+  .masterclass-catalog-head{margin-bottom:20px}
+  .masterclass-catalog-head h1{font-size:34px;line-height:1.01}
+  .masterclass-catalog-head>p:last-child{font-size:14px;line-height:1.52}
+  .masterclass-feature-image{width:min(74vw,290px);margin-top:20px;padding:9px}
+  .masterclass-feature-main{padding:20px 19px 23px}
+  .masterclass-feature-main h2{font-size:29px}
+  .masterclass-feature-main .masterclass-card-copy{font-size:13px;line-height:1.5}
+  .masterclass-detail-grid{grid-template-columns:1fr}
+  .masterclass-detail-block+.masterclass-detail-block,
+  .masterclass-detail-block.masterclass-speaker{grid-column:auto;border-left:0;border-top:1px solid var(--line)}
+  .masterclass-detail-block{padding:21px 19px 23px}
+  .masterclass-detail-block h3{font-size:22px}
+  .masterclass-topic-list li{font-size:12.5px}
+
+  /* Evita desbordes en formularios, botones y pie en pantallas pequeñas */
+  .button,.payment-action-card,.course-edition-option{max-width:100%}
+  .footer-links{align-items:flex-start}
+  .footer-links a{overflow-wrap:anywhere}
+}
+
+@media(max-width:430px){
+  .container{width:min(calc(100% - 22px),var(--max))}
+  .brand{gap:9px;min-width:0}
+  .brand-mark{font-size:38px}
+  .brand-name{font-size:8.5px}
+  .profile-editorial{padding-top:18px}
+  .profile-editorial-image{width:min(70vw,220px)}
+  .profile-editorial-copy{padding:20px 17px 23px}
+  .profile-editorial-copy h3{font-size:31px}
+  .profile-role{font-size:13px}
+  .masterclass-catalog-head h1{font-size:31px}
+  .masterclass-feature-image{width:min(76vw,255px);margin-top:17px}
+  .masterclass-feature-main{padding:18px 16px 21px}
+  .masterclass-feature-main h2{font-size:27px}
+  .masterclass-meta-item{grid-template-columns:82px 1fr;gap:9px}
+  .masterclass-detail-block{padding:19px 16px 21px}
+  .masterclass-detail-block h3{font-size:21px}
+  .masterclass-topic-list li{padding-left:15px}
+  .footer-links{display:grid;gap:8px;margin-top:12px}
+}
+
+@media(max-width:360px){
+  .container{width:min(calc(100% - 18px),var(--max))}
+  .brand-name{display:none}
+  .profile-editorial-image{width:min(72vw,205px)}
+  .profile-editorial-copy h3{font-size:29px}
+  .masterclass-catalog-head h1{font-size:29px}
+  .masterclass-feature-image{width:min(78vw,235px)}
+  .masterclass-feature-main h2{font-size:25px}
+  .masterclass-meta-item{grid-template-columns:74px 1fr}
+}
+
+
+/* =========================================================
+   ECIS 129.2 OFFLINE — perfil fundador editorial B&N
+   Foto monocromática + bloque carbón localizado.
+   El blanco/marfil exterior conserva limpieza y aire sanitario.
+   ========================================================= */
+.profile-founder{
+  grid-template-columns:minmax(250px,32%) minmax(0,1fr);
+  background:#11100f;
+  border-color:rgba(189,149,82,.30);
+  box-shadow:0 18px 42px rgba(18,12,8,.10);
+}
+.profile-founder .profile-editorial-image{
+  position:relative;
+  background:#e9e6e1;
+}
+.profile-founder .profile-editorial-image::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(90deg,rgba(0,0,0,.02) 0%,rgba(0,0,0,0) 68%,rgba(13,13,13,.18) 100%);
+}
+.profile-founder .profile-editorial-image img{
+  filter:grayscale(1) contrast(1.07) brightness(.95);
+  transform:scale(1.002);
+}
+.profile-founder .profile-editorial-copy{
+  position:relative;
+  background:linear-gradient(135deg,#0d0d0d 0%,#151313 72%,#211012 100%);
+  color:#fff;
+  border-left:1px solid rgba(217,188,125,.28);
+}
+.profile-founder .profile-editorial-copy::before{
+  content:"";
+  display:block;
+  width:42px;
+  height:2px;
+  margin:0 0 20px;
+  background:var(--burgundy);
+}
+.profile-founder .profile-editorial-copy .eyebrow{color:var(--gold-soft)}
+.profile-founder .profile-editorial-copy h3{color:#fff}
+.profile-founder .profile-editorial-copy h3 span{color:var(--gold-soft)}
+.profile-founder .profile-role{color:#f4efe9}
+.profile-founder .profile-editorial-copy>p:not(.eyebrow):not(.profile-role){color:#d0c8c1}
+
+@media(max-width:860px){
+  .profile-founder{
+    background:#fff;
+    border-color:var(--line);
+  }
+  .profile-founder .profile-editorial-copy{
+    margin-top:22px;
+    border-left:0;
+    border-top:1px solid rgba(217,188,125,.28);
+  }
+  .profile-founder .profile-editorial-copy::before{margin-left:auto;margin-right:auto}
+}
+
+@media(max-width:700px){
+  .profile-founder .profile-editorial-copy{margin-top:18px}
+}
+
+
+/* =========================================================
+   ECIS 129.3 — Mercado Pago: pago y comprobante en pasos separados
+   ========================================================= */
+.mp-confirm-checkout{max-width:820px;margin-left:auto;margin-right:auto}
+.mp-confirm-checkout .checkout-card-head{margin-bottom:18px}
+.mp-confirm-checkout .success-contact-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.mp-confirm-checkout .success-contact-actions .button{width:100%;margin:0}
+.proof-step-help{margin:12px 0 0;color:#847970;font-size:11px;text-align:center}
+.mp-qr-continue{margin-top:10px}
+@media(max-width:700px){
+  .mp-confirm-checkout .success-contact-actions{grid-template-columns:1fr}
+  .mp-confirm-checkout{max-width:none}
 }

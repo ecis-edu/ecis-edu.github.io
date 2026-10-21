@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta name="description" content="Confirmación y pago de inscripciones ECIS."/>
+<meta name="description" content="Pago y envío de comprobante para inscripciones ECIS."/>
 <meta name="theme-color" content="#0d0d0d"/>
 <meta name="robots" content="noindex,follow"/>
 <meta name="author" content="ECIS"/>
 <link href="assets/images/favicon.svg" rel="icon" type="image/svg+xml"/>
-<title>ECIS | Confirmación y pago</title>
-<link href="styles.css?v=20261016-phone125" rel="stylesheet"/>
+<title>ECIS | Pago</title>
+<link href="styles.css?v=20261021-offline1292" rel="stylesheet"/>
 
 </head>
 <body>
@@ -28,7 +28,7 @@
 <a href="experiencias.html">Aula ECIS</a>
 <a href="fuentes.html">Fuentes</a>
 <a href="contacto.html">Contacto</a>
-<a class="nav-cta" href="https://ecis-edu.github.io/ecis-verificador/" rel="noopener noreferrer" target="_blank">Verificador</a>
+<a class="nav-cta" href="https://ecis-edu.github.io/ecis-verificador/" rel="noopener noreferrer" target="_blank">Verificar certificado</a>
 </nav>
 </div>
 </header>
@@ -38,11 +38,11 @@
 <div class="container checkout-intro-inner">
 <div>
 <p class="eyebrow">INSCRIPCIÓN ECIS</p>
-<h1>Confirmación y pago</h1>
-<p>Revisá tus datos, elegí tu medio de pago y completá la inscripción.</p>
+<h1>Pago</h1>
+<p>Tu inscripción ya fue iniciada. Elegí cómo pagar y enviá el comprobante para completar el proceso.</p>
 </div>
 <ol class="checkout-progress" aria-label="Progreso de inscripción">
-<li class="is-complete" id="progress-data"><span>1</span><strong>Datos</strong></li>
+<li class="is-complete"><span>1</span><strong>Datos</strong></li>
 <li class="is-current" id="progress-payment"><span>2</span><strong>Pago</strong></li>
 <li id="progress-proof"><span>3</span><strong>Comprobante</strong></li>
 </ol>
@@ -51,88 +51,108 @@
 
 <section class="checkout-section">
 <div class="container checkout-narrow">
-<div id="payment-flow">
+<div id="payment-loading" class="checkout-card payment-loading-card">
+<p class="eyebrow">RECUPERANDO INSCRIPCIÓN</p>
+<h2>Preparando tu pago…</h2>
+<p>Estamos recuperando los datos de tu inscripción.</p>
+</div>
+
+<article class="checkout-card payment-status-card" id="payment-status-card" hidden>
+<p class="eyebrow">ESTADO DE INSCRIPCIÓN</p>
+<h2 id="payment-status-title">Tu inscripción</h2>
+<p id="payment-status-text"></p>
+<a class="button registration-secondary" href="experiencias.html">Volver a Aula ECIS</a>
+</article>
+
+<div id="payment-flow" hidden>
+<article class="checkout-card registration-code-card">
+<div>
+<p class="eyebrow">TU N.º DE INSCRIPCIÓN ECIS</p>
+<div class="registration-code-row">
+<strong class="final-registration-code" id="payment-registration-code">ECIS-26-00000</strong>
+<button class="copy-code-button" id="copy-payment-code" type="button">Copiar</button>
+</div>
+<p class="registration-code-help" id="payment-code-help">Guardá este número. También lo enviamos al correo registrado para que puedas retomar el proceso si cerrás esta página.</p>
+</div>
+</article>
+
 <article class="checkout-card checkout-review-card">
 <div class="checkout-card-head">
-<div><p class="eyebrow">RESUMEN DE INSCRIPCIÓN</p><h2>Revisá tus datos</h2></div>
-<a class="checkout-edit" href="inscripcion.html" id="payment-edit">Editar</a>
+<div><p class="eyebrow">RESUMEN</p><h2>Tu inscripción</h2></div>
+<a class="checkout-edit" href="inscripcion.html" id="payment-edit">Cambiar datos o fecha</a>
 </div>
-<div class="checkout-summary" id="payment-summary"></div>
+<div class="checkout-summary checkout-summary-compact" id="payment-summary"></div>
 </article>
 
 <article class="checkout-card checkout-payment-card" id="payment-method-card">
 <div class="checkout-card-head checkout-card-head-simple">
-<div><p class="eyebrow">MEDIO DE PAGO</p><h2>Elegí cómo pagar</h2><p>Elegí una opción. ECIS te guiará hasta obtener tu código y enviar el comprobante.</p></div>
+<div><p class="eyebrow">MEDIO DE PAGO</p><h2>¿Cómo querés pagar?</h2><p>Elegí una opción. Tu inscripción ya quedó iniciada. Se confirmará cuando ECIS verifique el pago.</p></div>
 </div>
-<div class="payment-method-grid" role="radiogroup" aria-label="Medios de pago disponibles">
-<label class="payment-method is-selected">
-<input type="radio" name="paymentMethod" value="Transferencia" checked/>
+<div class="payment-action-grid">
+<button class="payment-action-card" id="choose-transfer" type="button">
 <span class="payment-method-mark" aria-hidden="true">↗</span>
-<span><strong>Transferencia</strong><small>Transferencia bancaria y comprobante</small></span>
-</label>
-<label class="payment-method payment-method-mp">
-<input type="radio" name="paymentMethod" value="MercadoPago"/>
+<span><strong>Transferencia</strong><small>Ver alias, titular e importe</small></span>
+<span class="payment-action-arrow" aria-hidden="true">→</span>
+</button>
+<button class="payment-action-card" id="choose-mp" type="button">
 <span class="payment-method-mark payment-method-mark-mp" aria-hidden="true">MP</span>
-<span><strong>Mercado Pago / tarjeta</strong><small>App de Mercado Pago, crédito, débito y medios disponibles</small></span>
-</label>
+<span><strong>Mercado Pago / tarjeta</strong><small>Abrir el link oficial de pago</small></span>
+<span class="payment-action-arrow" aria-hidden="true">→</span>
+</button>
 </div>
-
-<div class="checkout-amount-row"><span>Importe</span><strong id="payment-amount">—</strong></div>
-<button class="button button-primary checkout-primary" id="payment-proceed" type="button">Continuar con transferencia →</button>
+<div class="checkout-amount-row"><span>Importe</span><strong id="payment-amount">—</strong></div><p class="payment-pending-note">El estado “Pendiente de pago” permanece activo durante 24 horas.</p>
 </article>
 
 <article class="checkout-card transfer-checkout" id="transfer-checkout" hidden>
 <div class="checkout-card-head checkout-card-head-simple">
-<div><p class="eyebrow">PASO 1 DE 2 · TRANSFERENCIA</p><h2>Realizá la transferencia</h2><p>1. Transferí el importe indicado. 2. Verificá el titular. 3. Volvé a ECIS y confirmá la operación para generar tu código.</p></div>
+<div><p class="eyebrow">TRANSFERENCIA / BILLETERA VIRTUAL</p><h2>Datos para transferir</h2><p>Realizá la transferencia y después pasá directamente al envío del comprobante.</p></div>
 </div>
 <div class="transfer-simple-grid">
-<div><span>Cuenta</span><strong>Ualá</strong></div>
+<div><span>Medio</span><strong>Ualá</strong></div>
 <div><span>Titular</span><strong>Lucas Aranda Amarilla</strong></div>
 <div class="transfer-alias-row"><span>Alias</span><strong>lucas.eci</strong><button type="button" id="copy-transfer-alias">Copiar</button></div>
 <div><span>Importe</span><strong id="transfer-amount">—</strong></div>
 </div>
-<div class="transfer-important"><strong>Antes de continuar:</strong> verificá que el titular sea <em>Lucas Aranda Amarilla</em>. Después de transferir, confirmá la operación para generar tu código ECIS.</div>
-<p class="checkout-error" id="payment-error" role="alert" hidden></p>
-<button class="button button-primary checkout-primary" id="transfer-done" type="button">Confirmar transferencia y generar mi código →</button>
-<button class="checkout-step-back" data-payment-back type="button">← Cambiar medio de pago</button>
+<div class="proof-inline-block">
+<p><strong>Después de transferir:</strong> enviá el comprobante. El mensaje ya incluye tu código ECIS y los datos de la inscripción.</p>
+<div class="success-contact-actions">
+<a class="button button-primary" id="transfer-whatsapp-proof" href="#" target="_blank" rel="noopener noreferrer">Enviar comprobante por WhatsApp →</a>
+<a class="button registration-secondary" id="transfer-email-proof" href="#">Enviar por correo →</a>
+</div>
+<small>Adjuntá el comprobante antes de enviar el mensaje.</small>
+</div>
+<button class="checkout-step-back" data-payment-back type="button">← Elegir otro medio de pago</button>
 </article>
 
 <article class="checkout-card mp-redirect-checkout" id="mp-checkout" hidden>
-<div class="checkout-card-head checkout-card-head-simple"><div><p class="eyebrow">PASO 1 DE 2 · MERCADO PAGO / TARJETA</p><h2>Completá el pago en Mercado Pago</h2><p>1. Abrí Mercado Pago. 2. Completá el pago. 3. Volvé a ECIS para generar tu código de inscripción.</p></div></div>
-<div class="mp-checkout-summary"><div><span>Importe</span><strong id="mp-checkout-amount">—</strong></div><div><span>Código ECIS</span><strong>Se genera al confirmar el pago</strong></div></div>
-<div class="mp-guide-note"><strong>Mantené ECIS abierto.</strong><span>Mercado Pago se abrirá aparte. Al volver a esta pestaña vas a encontrar el paso para confirmar el pago y generar tu código.</span></div>
-<div class="mp-hybrid-layout" id="mp-hybrid-options"><div class="mp-hybrid-action"><div class="mp-redirect-hero"><div class="mp-redirect-icon" aria-hidden="true">MP</div><div><strong>Link oficial de Mercado Pago</strong><p>Podés pagar desde tu cuenta de Mercado Pago o con los medios y tarjetas que la plataforma tenga disponibles.</p></div></div><a class="button button-primary checkout-primary mp-redirect-button" id="mp-redirect-button" href="#" target="_blank" rel="noopener noreferrer">Abrir Mercado Pago →</a><p class="mp-redirect-small">ECIS dejará preparado el siguiente paso mientras completás el pago en Mercado Pago.</p></div>
-<div class="mp-hybrid-qr" aria-label="Código QR para pagar con Mercado Pago"><p class="eyebrow">SI ESTÁS DESDE UNA COMPUTADORA</p><img id="mp-qr-image" src="assets/images/mercadopago-link-qr.png" alt="Código QR del link de pago de Mercado Pago" width="220" height="220"/><strong>Escaneá con tu celular</strong><small>El QR dirige al mismo link oficial.</small><button class="button registration-secondary mp-qr-continue" id="mp-qr-continue" type="button">Ya completé el pago con el QR →</button></div></div>
-<div class="mp-secure-note"><strong>Seguridad:</strong> los datos de tarjeta se procesan directamente en Mercado Pago; ECIS gestiona únicamente tu inscripción.</div><p class="checkout-error" id="mp-payment-error" role="alert" hidden></p><button class="checkout-step-back" data-payment-back type="button">← Cambiar medio de pago</button>
+<div class="checkout-card-head checkout-card-head-simple">
+<div><p class="eyebrow">MERCADO PAGO / TARJETA</p><h2>Completá el pago en Mercado Pago</h2><p>El pago se abre aparte. Al continuar, ECIS te mostrará el paso siguiente para enviar el comprobante.</p></div>
+</div>
+<div class="mp-checkout-summary"><div><span>Importe</span><strong id="mp-checkout-amount">—</strong></div><div><span>Código ECIS</span><strong id="mp-checkout-code">—</strong></div></div>
+<div class="mp-hybrid-layout" id="mp-hybrid-options"><div class="mp-hybrid-action"><div class="mp-redirect-hero"><div class="mp-redirect-icon" aria-hidden="true">MP</div><div><strong>Link oficial de Mercado Pago</strong><p>Pagá con los medios disponibles en Mercado Pago.</p></div></div><a class="button button-primary checkout-primary mp-redirect-button" id="mp-redirect-button" href="#" target="_blank" rel="noopener noreferrer">Abrir Mercado Pago →</a></div>
+<div class="mp-hybrid-qr" id="mp-qr-container" aria-label="Código QR para pagar con Mercado Pago"><p class="eyebrow">DESDE UNA COMPUTADORA</p><img id="mp-qr-image" src="assets/images/mercadopago-link-qr.png" alt="Código QR del link de pago de Mercado Pago" width="220" height="220"/><strong>Escaneá con tu celular</strong><small>El QR dirige al mismo link oficial.</small><button class="button registration-secondary mp-qr-continue" id="mp-qr-continue" type="button">Ya pagué · continuar →</button></div></div>
+<div class="mp-guide-note"><strong>Siguiente paso</strong><span>Después de abrir Mercado Pago, esta página pasará al envío del comprobante.</span></div>
+<button class="checkout-step-back" data-payment-back type="button">← Elegir otro medio de pago</button>
 </article>
-<article class="checkout-card mp-confirm-checkout" id="mp-confirm-checkout" hidden>
-<div class="checkout-card-head checkout-card-head-simple"><div><p class="eyebrow">PASO 2 DE 2 · MERCADO PAGO / TARJETA</p><h2>Generá tu código de inscripción</h2><p>Usá este botón después de completar el pago en Mercado Pago. ECIS registrará la inscripción y mostrará tu código.</p></div></div>
-<div class="mp-confirm-panel"><div class="mp-confirm-number">2</div><div><strong>Pago completado → código ECIS</strong><p>Confirmá la operación y esperá en esta pantalla hasta que aparezca tu código y las opciones para enviar el comprobante.</p></div></div>
-<button class="button button-primary checkout-primary" id="mp-done" type="button">Confirmar pago y generar mi código →</button><a class="button registration-secondary checkout-secondary-link" id="mp-reopen-button" href="#" target="_blank" rel="noopener noreferrer">Volver a abrir Mercado Pago</a><button class="checkout-step-back" id="mp-confirm-back" type="button">← Volver al paso de pago</button>
-</article>
-</div><!-- /#payment-flow -->
 
-<article class="checkout-card checkout-success" id="registration-finished" hidden>
-<div class="success-check" aria-hidden="true">✓</div>
-<p class="eyebrow">PASO FINAL · COMPROBANTE</p>
-<h2>Tu inscripción quedó registrada</h2>
-<div class="final-registration-code" id="final-registration-code">ECIS-0000</div>
-<button class="copy-code-button" id="copy-registration-code" type="button">Copiar código</button>
-<p class="success-lead">Último paso: <strong>enviá el comprobante junto con tu código ECIS</strong>.</p>
-<div class="success-instructions">
-<p>Elegí WhatsApp o correo. El mensaje ya incluye tus datos de inscripción; adjuntá el comprobante antes de enviarlo.</p>
-<ol><li>Tu código de inscripción.</li><li>El comprobante de pago.</li></ol>
-<p class="success-note">ECIS confirmará la participación después de verificar el comprobante y el ingreso del pago. El código permite identificar tu inscripción aunque el pago se haya realizado desde otra cuenta.</p>
+<article class="checkout-card mp-confirm-checkout" id="mp-proof-checkout" hidden>
+<div class="checkout-card-head checkout-card-head-simple">
+<div><p class="eyebrow">COMPROBANTE</p><h2>Ahora enviá tu comprobante</h2><p>Para completar el proceso, adjuntá el comprobante por WhatsApp o correo. El mensaje ya incluye tu código ECIS y los datos de la inscripción.</p></div>
+</div>
+<div class="mp-confirm-panel">
+<div class="mp-confirm-number" aria-hidden="true">3</div>
+<div><strong>Tu inscripción sigue pendiente de verificación.</strong><p>ECIS confirmará la inscripción cuando el pago y el comprobante hayan sido revisados.</p></div>
 </div>
 <div class="success-contact-actions">
-<a class="button button-primary" id="send-whatsapp-proof" href="#" target="_blank" rel="noopener noreferrer">Enviar por WhatsApp →</a>
-<a class="button registration-secondary" id="send-email-proof" href="#">Enviar por correo →</a>
+<a class="button button-primary" id="mp-whatsapp-proof" href="#" target="_blank" rel="noopener noreferrer">Enviar comprobante por WhatsApp →</a>
+<a class="button registration-secondary" id="mp-email-proof" href="#">Enviar por correo →</a>
 </div>
-<p class="success-small"><strong>Completá este último paso ahora.</strong> Abrí WhatsApp o correo, adjuntá el comprobante y enviá el mensaje preparado.</p>
+<p class="proof-step-help">Adjuntá el comprobante antes de enviar el mensaje.</p>
+<button class="checkout-step-back" data-payment-back type="button">← Volver a medios de pago</button>
 </article>
+</div>
 
-
-
+<p class="checkout-error" id="payment-load-error" role="alert" hidden></p>
 <noscript><p class="noscript-note">Activá JavaScript en tu navegador para completar la inscripción.</p></noscript>
 <iframe id="ecis-registration-frame" name="ecis-registration-frame" title="Registro ECIS" hidden></iframe>
 <form id="ecis-registration-post" method="POST" target="ecis-registration-frame" hidden>
@@ -147,8 +167,11 @@
 <div class="brand footer-brand"><span class="brand-mark">ECIS</span><span aria-hidden="true" class="brand-divider"></span><span class="brand-name">EDUCACIÓN EN CONTROL DE INFECCIONES<br/>Y SEGURIDAD DEL PACIENTE</span></div>
 <div class="footer-social"><a aria-label="Instagram" href="https://www.instagram.com/ecis_edu/?hl=es-la" rel="noopener noreferrer" target="_blank"><img alt="" aria-hidden="true" class="social-icon" src="assets/images/iconoinstagram.png"/></a><a aria-label="Correo electrónico" href="mailto:ecis.ar.edu@gmail.com"><img alt="" aria-hidden="true" class="social-icon" src="assets/images/iconomail.png"/></a><a aria-label="WhatsApp" href="https://wa.me/5491173445804?text=Hola%20ECIS%2C%20quisiera%20realizar%20una%20consulta." rel="noopener noreferrer" target="_blank"><img alt="" aria-hidden="true" class="social-icon" src="assets/images/iconowsp.png"/></a></div>
 </div></div>
-<div class="footer-bottom"><div class="container">© <span id="year"></span> ECIS. Todos los derechos reservados.<span>De la evidencia a la práctica.</span></div></div>
+<div class="footer-bottom"><div class="container footer-bottom-inner">
+<div class="footer-identity"><span>© <span id="year"></span> ECIS. Todos los derechos reservados.</span><span class="footer-motto">De la evidencia a la práctica.</span></div>
+<nav class="footer-links" aria-label="Información legal"><a href="privacidad.html">Privacidad</a><a href="condiciones.html">Condiciones de inscripción</a><a href="https://ecis-edu.github.io/ecis-verificador/" rel="noopener noreferrer" target="_blank">Verificar certificado</a></nav>
+</div></div>
 </footer>
-<script src="script.js?v=20261016-phone125"></script>
+<script src="script.js?v=20261020-offline1291"></script>
 </body>
 </html>
