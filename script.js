@@ -414,7 +414,11 @@ contactForm?.addEventListener('submit', async event => {
     let data = {};
     try { data = await response.json(); } catch (_) {}
 
-    if (!response.ok || data.success === false) {
+    if (
+      !response.ok ||
+      data.success === false ||
+      String(data.success).toLowerCase() === 'false'
+    ) {
       throw new Error(data.message || 'Podés volver a enviar el mensaje o elegir WhatsApp/correo.');
     }
 
