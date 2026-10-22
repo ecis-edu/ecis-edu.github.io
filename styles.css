@@ -2075,3 +2075,74 @@ body.is-ready .home-banner-content>*:nth-child(4){animation-delay:.18s}
   .mp-confirm-checkout .success-contact-actions{grid-template-columns:1fr}
   .mp-confirm-checkout{max-width:none}
 }
+
+
+/* =========================================================
+   ECIS 129.4 — ajustes de perfil fundador + Masterclass escalable
+   ========================================================= */
+
+/* Fundador: fotografía contenida dentro de la ficha, con respiración uniforme. */
+.profile-founder{
+  align-items:stretch;
+}
+.profile-founder .profile-editorial-image{
+  align-self:stretch;
+  aspect-ratio:auto;
+  margin:14px 0 14px 14px;
+  min-height:0;
+  overflow:hidden;
+  background:#0f0f0f;
+}
+.profile-founder .profile-editorial-image img{
+  width:100%;
+  height:100%;
+  min-height:100%;
+  object-fit:cover;
+  object-position:center 18%;
+  transform:none;
+}
+.profile-founder .profile-editorial-copy{
+  min-height:100%;
+}
+
+/* Masterclass: encabezado general y tarjetas preparadas para sumar nuevos temas. */
+.masterclass-catalog-head{
+  max-width:980px;
+}
+.masterclass-catalog-head h1 span{
+  color:var(--burgundy);
+  font-style:italic;
+}
+.masterclass-feature-main>.eyebrow{
+  margin-bottom:15px;
+}
+.masterclass-feature-main h2 span{
+  display:block;
+}
+
+@media(max-width:860px){
+  .profile-founder{
+    padding-top:22px;
+  }
+  .profile-founder .profile-editorial-image{
+    align-self:auto;
+    width:min(42vw,260px);
+    aspect-ratio:4/5;
+    margin:0 auto;
+  }
+  .profile-founder .profile-editorial-copy{
+    min-height:0;
+  }
+}
+
+@media(max-width:700px){
+  .profile-founder .profile-editorial-image{width:min(68vw,245px)}
+}
+
+@media(max-width:430px){
+  .profile-founder .profile-editorial-image{width:min(70vw,220px)}
+}
+
+@media(max-width:360px){
+  .profile-founder .profile-editorial-image{width:min(72vw,205px)}
+}
