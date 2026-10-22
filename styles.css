@@ -2146,3 +2146,229 @@ body.is-ready .home-banner-content>*:nth-child(4){animation-delay:.18s}
 @media(max-width:360px){
   .profile-founder .profile-editorial-image{width:min(72vw,205px)}
 }
+
+/* =========================================================
+   ECIS 129.5 — responsive integral / fundador sin recorte
+   - Evita recortes forzados en la fotografía del fundador.
+   - Los banners dejan de superponer texto e imagen en tablet y
+     en la "vista de ordenador" habitual de navegadores móviles.
+   - Refuerza el comportamiento fluido de bloques, textos y navegación.
+   ========================================================= */
+
+/* Seguridad transversal contra desbordes accidentales. */
+html{overflow-x:clip}
+body{min-width:0}
+.container,
+.nav-wrap,
+.home-banner-content,
+.page-banner-content,
+.profile-editorial,
+.profile-editorial-copy,
+.contact-grid,
+.contact-info,
+.contact-form-wrap,
+.masterclass-feature-card,
+.masterclass-feature-main,
+.checkout-card{min-width:0}
+.profile-editorial-copy,
+.page-banner-content,
+.contact-form-wrap{overflow-wrap:break-word}
+
+/* Fundador: conservar la proporción real de la fotografía. */
+.profile-founder{
+  align-items:start;
+  grid-template-columns:minmax(260px,330px) minmax(0,1fr);
+  background:#fff;
+}
+.profile-founder .profile-editorial-image{
+  width:calc(100% - 28px);
+  margin:14px;
+  align-self:start;
+  aspect-ratio:4/5;
+  min-height:0;
+  max-height:none;
+  overflow:hidden;
+  background:#0f0f0f;
+}
+.profile-founder .profile-editorial-image img{
+  width:100%;
+  height:100%;
+  min-height:0;
+  object-fit:contain;
+  object-position:center top;
+  transform:none;
+}
+.profile-founder .profile-editorial-copy{
+  min-height:0;
+  align-self:stretch;
+}
+
+/* En anchos intermedios se prioriza una composición apilada estable.
+   Esto cubre tablets y la vista de escritorio solicitada desde celulares. */
+@media(max-width:1100px){
+  :root{--ecis-mid-hero-media:clamp(170px,22vw,235px)}
+
+  .container{width:min(calc(100% - 44px),var(--max))}
+
+  /* Navegación: evitar que la marca y los enlaces compitan por ancho. */
+  .menu-toggle{display:block}
+  .main-nav{
+    position:absolute;
+    left:0;
+    right:0;
+    top:82px;
+    display:none;
+    flex-direction:column;
+    align-items:stretch;
+    gap:0;
+    background:#111;
+    padding:14px 22px 22px;
+    max-height:calc(100dvh - 82px);
+    overflow-y:auto;
+  }
+  .main-nav.is-open{display:flex}
+  .main-nav a{padding:13px 9px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .main-nav .nav-cta{margin-top:12px;text-align:center}
+
+  /* Inicio: fotografía arriba; contenido debajo. */
+  .home-banner{
+    display:block;
+    min-height:0;
+    padding-top:var(--ecis-mid-hero-media);
+    background-color:var(--paper);
+    background-size:auto var(--ecis-mid-hero-media);
+    background-position:70% top;
+    background-repeat:no-repeat;
+  }
+  .home-banner::after{display:none!important}
+  .home-banner-content{max-width:none;padding:32px 0 38px}
+  .home-banner-content .display-title{max-width:760px;font-size:clamp(44px,5.4vw,58px);line-height:.98}
+  .home-banner-content .lead{max-width:720px}
+
+  /* Banners internos: nunca superponer texto a la fotografía en este rango. */
+  .page-banner{
+    display:block;
+    min-height:0;
+    padding-top:var(--ecis-mid-hero-media);
+    background-size:auto var(--ecis-mid-hero-media);
+    background-repeat:no-repeat;
+  }
+  .page-banner .container{position:relative;z-index:3}
+  .page-banner-content{max-width:none;padding:32px 0 38px}
+  .page-banner-content .display-title{max-width:820px;font-size:clamp(42px,5.2vw,56px);line-height:1}
+  .page-banner-content>p:not(.eyebrow):not(.lead),
+  .page-banner-content .about-subblock p:not(.eyebrow){max-width:760px}
+  .page-banner-content .lead{max-width:760px}
+
+  .page-banner-about{background-position:70% top;background-color:#100b0c}
+  .page-banner-experience{background-position:68% top;background-color:var(--paper)}
+  .page-banner-sources{background-position:68% top;background-color:#0d0d0d}
+  .page-banner-about::before,
+  .page-banner-about::after,
+  .page-banner-experience::before,
+  .page-banner-experience::after,
+  .page-banner-sources::before,
+  .page-banner-sources::after{display:none!important}
+
+  /* Contacto: misma lógica de imagen independiente + texto debajo. */
+  .contact-hero{
+    min-height:0;
+    padding-top:var(--ecis-mid-hero-media);
+    background:#f9f6f0;
+  }
+  .contact-hero::after{
+    top:0;
+    right:0;
+    bottom:auto;
+    left:0;
+    width:100%;
+    height:var(--ecis-mid-hero-media);
+    background-size:auto var(--ecis-mid-hero-media);
+    background-position:50% 72%;
+    background-repeat:no-repeat;
+  }
+  .contact-hero::before{display:none!important}
+  .contact-hero .container{padding-top:32px;padding-bottom:38px}
+
+  /* Fundador: una sola columna antes de que el texto quede demasiado estrecho. */
+  .profile-founder{
+    grid-template-columns:1fr;
+    max-width:760px;
+    margin-inline:auto;
+    padding-top:24px;
+  }
+  .profile-founder .profile-editorial-image{
+    width:min(calc(100% - 40px),340px);
+    margin:0 auto;
+    aspect-ratio:4/5;
+  }
+  .profile-founder .profile-editorial-copy{
+    margin-top:24px;
+    border-left:0;
+    border-top:1px solid rgba(217,188,125,.28);
+    padding:28px 30px 31px;
+  }
+  .profile-founder .profile-editorial-copy::before{margin-left:auto;margin-right:auto}
+  .profile-founder .profile-editorial-copy .eyebrow,
+  .profile-founder .profile-editorial-copy h3,
+  .profile-founder .profile-role{text-align:center}
+
+  /* Otros bloques que necesitan más aire en tablet / desktop móvil. */
+  .contact-grid,
+  .philosophy-grid,
+  .institution-band-grid{grid-template-columns:1fr}
+  .contact-info{border-right:0;padding-right:0}
+  .contact-form-wrap{padding-left:0;border-top:1px solid var(--line)}
+  .institution-band .button{justify-self:start}
+}
+
+@media(max-width:700px){
+  :root{--ecis-mid-hero-media:156px}
+  .container{width:min(calc(100% - 28px),var(--max))}
+
+  .nav-wrap{min-height:68px}
+  .main-nav{top:68px;max-height:calc(100dvh - 68px);padding:12px 16px 18px}
+  .brand-name,.brand-divider{display:none}
+
+  .home-banner-content,
+  .page-banner-content{padding:24px 0 30px}
+  .home-banner-content .display-title{font-size:38px;line-height:1.01}
+  .page-banner-content .display-title{font-size:36px;line-height:1.02}
+  .page-banner-content>p:not(.eyebrow):not(.lead),
+  .page-banner-content .about-subblock p:not(.eyebrow){font-size:14.5px;line-height:1.58}
+
+  .contact-hero .container{padding-top:24px;padding-bottom:30px}
+  .contact-hero h1{font-size:38px;line-height:1.02}
+
+  .profile-founder{padding-top:20px;max-width:620px}
+  .profile-founder .profile-editorial-image{
+    width:min(calc(100% - 36px),285px);
+    margin:0 auto;
+  }
+  .profile-founder .profile-editorial-copy{
+    margin-top:20px;
+    padding:24px 20px 27px;
+  }
+  .profile-founder .profile-editorial-copy h3{font-size:34px}
+  .profile-founder .profile-role{font-size:13.5px;line-height:1.45}
+  .profile-founder .profile-editorial-copy>p:not(.eyebrow):not(.profile-role){font-size:14px;line-height:1.62}
+
+  .contact-form{grid-template-columns:1fr}
+  .contact-form .full,.contact-form .button{grid-column:1}
+  .contact-form .button{width:100%}
+}
+
+@media(max-width:430px){
+  :root{--ecis-mid-hero-media:146px}
+  .container{width:min(calc(100% - 22px),var(--max))}
+  .profile-founder .profile-editorial-image{width:min(calc(100% - 28px),250px)}
+  .profile-founder .profile-editorial-copy{padding:22px 17px 25px}
+  .profile-founder .profile-editorial-copy h3{font-size:31px}
+  .profile-founder .profile-editorial-copy>p:not(.eyebrow):not(.profile-role){font-size:13.7px;line-height:1.6}
+}
+
+@media(min-width:1101px){
+  /* Escritorio real: mantener la composición editorial superpuesta de banners. */
+  .profile-founder{grid-template-columns:minmax(280px,330px) minmax(0,1fr)}
+  .profile-founder .profile-editorial-image{aspect-ratio:4/5}
+}
