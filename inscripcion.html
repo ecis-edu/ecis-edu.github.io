@@ -1,20 +1,22 @@
 <!DOCTYPE html>
+
 <html lang="es-AR">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta name="description" content="Inscripción a experiencias ECIS."/>
-<meta name="theme-color" content="#0d0d0d"/>
-<meta name="robots" content="noindex,follow"/>
-<meta name="author" content="ECIS"/>
-<meta property="og:locale" content="es_AR"/>
-<meta property="og:type" content="website"/>
-<meta property="og:site_name" content="ECIS"/>
-<meta property="og:title" content="ECIS | Inscripción"/>
-<meta property="og:description" content="Completá tus datos para iniciar una inscripción en ECIS."/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="Inscripción a experiencias ECIS." name="description"/>
+<meta content="#0d0d0d" name="theme-color"/>
+<meta content="noindex,follow" name="robots"/>
+<meta content="ECIS" name="author"/>
+<meta content="es_AR" property="og:locale"/>
+<meta content="website" property="og:type"/>
+<meta content="ECIS" property="og:site_name"/>
+<meta content="ECIS | Inscripción" property="og:title"/>
+<meta content="Completá tus datos para iniciar una inscripción en ECIS." property="og:description"/>
+<meta content="https://ecis-edu.github.io/assets/images/ecis-web-preview.png" property="og:image"/><meta content="1200" property="og:image:width"/><meta content="630" property="og:image:height"/><meta content="ECIS · Educación en Control de Infecciones y Seguridad del Paciente" property="og:image:alt"/><meta content="summary_large_image" name="twitter:card"/><meta content="https://ecis-edu.github.io/assets/images/ecis-web-preview.png" name="twitter:image"/>
 <link href="assets/images/favicon.svg" rel="icon" type="image/svg+xml"/>
 <title>ECIS | Inscripción</title>
-<link href="styles.css?v=20261022-offline1295" rel="stylesheet"/>
+<link crossorigin="anonymous" href="https://script.google.com" rel="preconnect"/><link crossorigin="anonymous" href="https://script.googleusercontent.com" rel="preconnect"/><link href="styles.css?v=20261026-perf1297" rel="stylesheet"/>
 </head>
 <body>
 <a class="skip-link" href="#contenido">Saltar al contenido</a>
@@ -36,8 +38,7 @@
 </nav>
 </div>
 </header>
-
-<main id="contenido" class="checkout-page">
+<main class="checkout-page" id="contenido">
 <section class="checkout-intro">
 <div class="container checkout-intro-inner">
 <div>
@@ -45,14 +46,13 @@
 <h1>Tu inscripción</h1>
 <p>Revisá la actividad elegida, completá tus datos y continuá al pago.</p>
 </div>
-<ol class="checkout-progress" aria-label="Progreso de inscripción">
+<ol aria-label="Progreso de inscripción" class="checkout-progress">
 <li class="is-current"><span>1</span><strong>Datos</strong></li>
 <li><span>2</span><strong>Pago</strong></li>
 <li><span>3</span><strong>Comprobante</strong></li>
 </ol>
 </div>
 </section>
-
 <section class="checkout-section">
 <div class="container checkout-narrow">
 <article class="checkout-card enrollment-choice-card" id="inscripcion-form">
@@ -63,24 +63,21 @@
 <p id="enrollment-choice-copy">Si llegaste desde una fecha publicada, la actividad y la edición quedan seleccionadas automáticamente.</p>
 </div>
 </div>
-
 <div class="checkout-field checkout-field-full" id="experience-selector-wrap">
 <label for="enroll-experience">Actividad</label>
 <div class="checkout-select-wrap">
-<select id="enroll-experience" name="experienciaId" required disabled>
+<select disabled="" id="enroll-experience" name="experienciaId" required="">
 <option value="">Cargando actividades…</option>
 </select>
 </div>
-<button class="checkout-retry" id="experience-retry" type="button" hidden>Actualizar disponibilidad</button>
+<button class="checkout-retry" hidden="" id="experience-retry" type="button">Actualizar disponibilidad</button>
 </div>
-
-<div class="selected-experience-summary" id="selected-experience-summary" hidden></div>
-<div class="edition-picker" id="edition-picker" aria-live="polite">
+<div class="selected-experience-summary" hidden="" id="selected-experience-summary"></div>
+<div aria-live="polite" class="edition-picker" id="edition-picker">
 <p class="edition-picker-placeholder">Cargando fechas disponibles…</p>
 </div>
 <p class="checkout-field-help" id="experience-help">Las fechas se actualizan según las ediciones activas de ECIS.</p>
 </article>
-
 <article class="checkout-card">
 <div class="checkout-card-head checkout-card-head-simple">
 <div>
@@ -89,62 +86,59 @@
 <p>Al continuar generaremos tu número de inscripción ECIS y lo enviaremos al correo que ingreses.</p>
 </div>
 </div>
-<form id="ecis-enrollment-form" class="checkout-form" novalidate>
+<form class="checkout-form" id="ecis-enrollment-form" novalidate="">
 <div class="checkout-form-grid">
 <div class="checkout-field">
 <label for="enroll-name">Nombre <span aria-hidden="true">*</span></label>
-<input id="enroll-name" name="nombre" type="text" inputmode="text" autocomplete="given-name" placeholder="Nombre" required minlength="2" maxlength="60" pattern="[A-Za-zÀ-ÖØ-öø-ÿĀ-ž'’ -]{2,60}"/>
+<input autocomplete="given-name" id="enroll-name" inputmode="text" maxlength="60" minlength="2" name="nombre" pattern="[A-Za-zÀ-ÖØ-öø-ÿĀ-ž'’ -]{2,60}" placeholder="Nombre" required="" type="text"/>
 </div>
 <div class="checkout-field">
 <label for="enroll-last-name">Apellido <span aria-hidden="true">*</span></label>
-<input id="enroll-last-name" name="apellido" type="text" inputmode="text" autocomplete="family-name" placeholder="Apellido" required minlength="2" maxlength="60" pattern="[A-Za-zÀ-ÖØ-öø-ÿĀ-ž'’ -]{2,60}"/>
+<input autocomplete="family-name" id="enroll-last-name" inputmode="text" maxlength="60" minlength="2" name="apellido" pattern="[A-Za-zÀ-ÖØ-öø-ÿĀ-ž'’ -]{2,60}" placeholder="Apellido" required="" type="text"/>
 </div>
 <div class="checkout-field">
 <label for="enroll-email">Correo electrónico <span aria-hidden="true">*</span></label>
-<input id="enroll-email" name="email" type="email" autocomplete="email" placeholder="nombre@email.com" required maxlength="140"/>
+<input autocomplete="email" id="enroll-email" maxlength="140" name="email" placeholder="nombre@email.com" required="" type="email"/>
 </div>
 <div class="checkout-field">
 <label for="enroll-document">Documento de identidad <span aria-hidden="true">*</span></label>
-<input id="enroll-document" name="documento" type="text" inputmode="text" autocomplete="off" placeholder="DNI, cédula o pasaporte" required minlength="4" maxlength="30"/>
+<input autocomplete="off" id="enroll-document" inputmode="text" maxlength="30" minlength="4" name="documento" placeholder="DNI, cédula o pasaporte" required="" type="text"/>
 <p class="checkout-field-hint">DNI, cédula, pasaporte u otro documento. Puede incluir letras y números.</p>
 </div>
 <div class="checkout-field checkout-field-full">
 <label for="enroll-phone">Teléfono / WhatsApp <span aria-hidden="true">*</span></label>
-<input id="enroll-phone" name="telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="Ej.: +54 9 11 1234 5678" required maxlength="30"/>
+<input autocomplete="tel" id="enroll-phone" inputmode="tel" maxlength="30" name="telefono" placeholder="Ej.: +54 9 11 1234 5678" required="" type="tel"/>
 <p class="checkout-field-hint">Incluí código de país y código de área. Podés usar +, espacios, paréntesis o guiones.</p>
 </div>
 </div>
-
-<p class="checkout-info" id="enrollment-status" role="status" hidden></p>
-<p class="checkout-error" id="enrollment-error" role="alert" hidden></p>
+<p class="checkout-info" hidden="" id="enrollment-status" role="status"></p>
+<p class="checkout-error" hidden="" id="enrollment-error" role="alert"></p>
 <button class="button button-primary checkout-primary" id="enrollment-submit" type="submit">Iniciar inscripción y continuar al pago →</button>
-<div class="checkout-privacy" aria-label="Uso de datos personales">
-<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3m-11 0h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Zm3 5a2 2 0 1 0 4 0 2 2 0 0 0-4 0Z"/></svg>
+<div aria-label="Uso de datos personales" class="checkout-privacy">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3m-11 0h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Zm3 5a2 2 0 1 0 4 0 2 2 0 0 0-4 0Z"></path></svg>
 <span>Tus datos se utilizan para gestionar la inscripción, el pago y la certificación. <a href="privacidad.html">Conocé cómo los protegemos.</a></span>
 </div>
 <p class="checkout-process-note">La inscripción queda confirmada una vez verificado el pago. Las inscripciones pendientes de pago permanecen activas durante 24 horas.</p>
 </form>
 </article>
-
 <noscript><p class="noscript-note">Activá JavaScript en tu navegador para completar la inscripción.</p></noscript>
-<iframe id="ecis-registration-frame" name="ecis-registration-frame" title="Registro ECIS" hidden></iframe>
-<form id="ecis-registration-post" method="POST" target="ecis-registration-frame" hidden>
+<iframe hidden="" id="ecis-registration-frame" name="ecis-registration-frame" title="Registro ECIS"></iframe>
+<form hidden="" id="ecis-registration-post" method="POST" target="ecis-registration-frame">
 <input id="ecis-registration-payload" name="payload" type="hidden"/>
 </form>
 </div>
 </section>
 </main>
-
 <footer class="site-footer">
 <div class="footer-main"><div class="container footer-grid">
 <div class="brand footer-brand"><span class="brand-mark">ECIS</span><span aria-hidden="true" class="brand-divider"></span><span class="brand-name">EDUCACIÓN EN CONTROL DE INFECCIONES<br/>Y SEGURIDAD DEL PACIENTE</span></div>
-<div class="footer-social"><a aria-label="Instagram" href="https://www.instagram.com/ecis_edu/?hl=es-la" rel="noopener noreferrer" target="_blank"><img alt="" aria-hidden="true" class="social-icon" src="assets/images/iconoinstagram.png"/></a><a aria-label="Correo electrónico" href="mailto:ecis.ar.edu@gmail.com"><img alt="" aria-hidden="true" class="social-icon" src="assets/images/iconomail.png"/></a><a aria-label="WhatsApp" href="https://wa.me/5491173445804?text=Hola%20ECIS%2C%20quisiera%20realizar%20una%20consulta." rel="noopener noreferrer" target="_blank"><img alt="" aria-hidden="true" class="social-icon" src="assets/images/iconowsp.png"/></a></div>
+<div class="footer-social"><a aria-label="Instagram" href="https://www.instagram.com/ecis_edu/?hl=es-la" rel="noopener noreferrer" target="_blank"><img alt="" aria-hidden="true" class="social-icon" decoding="async" height="21" loading="lazy" src="assets/images/iconoinstagram.png" width="21"/></a><a aria-label="Correo electrónico" href="mailto:ecis.ar.edu@gmail.com"><img alt="" aria-hidden="true" class="social-icon" decoding="async" height="21" loading="lazy" src="assets/images/iconomail.png" width="21"/></a><a aria-label="WhatsApp" href="https://wa.me/5491173445804?text=Hola%20ECIS%2C%20quisiera%20realizar%20una%20consulta." rel="noopener noreferrer" target="_blank"><img alt="" aria-hidden="true" class="social-icon" decoding="async" height="21" loading="lazy" src="assets/images/iconowsp.png" width="21"/></a></div>
 </div></div>
 <div class="footer-bottom"><div class="container footer-bottom-inner">
 <div class="footer-identity"><span>© <span id="year"></span> ECIS. Todos los derechos reservados.</span><span class="footer-motto">De la evidencia a la práctica.</span></div>
-<nav class="footer-links" aria-label="Información legal"><a href="privacidad.html">Privacidad</a><a href="condiciones.html">Condiciones de inscripción</a><a href="https://ecis-edu.github.io/ecis-verificador/" rel="noopener noreferrer" target="_blank">Verificar certificado</a></nav>
+<nav aria-label="Información legal" class="footer-links"><a href="privacidad.html">Privacidad</a><a href="condiciones.html">Condiciones de inscripción</a><a href="https://ecis-edu.github.io/ecis-verificador/" rel="noopener noreferrer" target="_blank">Verificar certificado</a></nav>
 </div></div>
 </footer>
-<script src="script.js?v=20261022-offline1295"></script>
+<script defer="" src="script.js?v=20261026-perf1297"></script>
 </body>
 </html>

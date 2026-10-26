@@ -7,6 +7,7 @@
   --ivory:#f6f1e9;
   --paper:#fbfaf7;
   --gold:#bd9552;
+  --gold-text:#806024;
   --gold-soft:#d9bc7d;
   --ink:#181716;
   --muted:#6d665f;
@@ -43,7 +44,7 @@ button,input,textarea,select{font:inherit;font-size:16px}
 .menu-toggle span{display:block;width:25px;height:1px;background:#fff;margin:6px auto}
 
 /* Type */
-.eyebrow{margin:0 0 17px;color:var(--gold);font-size:11px;font-weight:700;letter-spacing:.30em;text-transform:uppercase}
+.eyebrow{margin:0 0 17px;color:var(--gold-text);font-size:11px;font-weight:700;letter-spacing:.30em;text-transform:uppercase}
 .display-title{margin:0;font:400 clamp(54px,5.6vw,92px)/.94 Georgia,"Times New Roman",serif;letter-spacing:-.05em}
 .display-title .burgundy,.section-title .burgundy{color:var(--burgundy)}
 .display-title em,.section-title em{color:var(--burgundy);font-style:normal}
@@ -308,6 +309,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 /* Texto pensado para fondos oscuros en Sobre ECIS y Fuentes */
 .page-banner-dark{color:#fff}
 .page-banner-dark .eyebrow{color:var(--gold-soft)}
+.philosophy-band .eyebrow,.institution-band .eyebrow,.profile-founder .profile-editorial-copy .eyebrow{color:var(--gold-soft)}
 .page-banner-dark .display-title,.page-banner-dark h1{color:#fff}
 .page-banner-dark .display-title .burgundy,.page-banner-dark .burgundy{color:var(--gold-soft)}
 .page-banner-dark .lead,.page-banner-dark>p,.page-banner-dark .page-banner-content>p:not(.eyebrow),.page-banner-dark .about-subblock p:not(.eyebrow){color:rgba(255,255,255,.86)}
@@ -570,7 +572,7 @@ img{height:auto}
   grid-row:1;
 
   margin:0 0 13px;
-  color:var(--gold);
+  color:var(--gold-text);
 }
 
 .sources-reference-intro h2{
@@ -2371,4 +2373,37 @@ body{min-width:0}
   /* Escritorio real: mantener la composición editorial superpuesta de banners. */
   .profile-founder{grid-template-columns:minmax(280px,330px) minmax(0,1fr)}
   .profile-founder .profile-editorial-image{aspect-ratio:4/5}
+}
+
+
+/* =========================================================
+   ECIS 129.7 — rendimiento + CTA principal Aula ECIS
+   ========================================================= */
+/* Hero: conservar entrada sutil sin ocultar contenido crítico/LCP. */
+body.is-ready .home-banner-content>*{
+  opacity:1;
+  transform:none;
+  filter:none;
+  animation:ecisHeroPerf .32s cubic-bezier(.22,1,.36,1) both;
+}
+body.is-ready .home-banner-content>*:nth-child(2){animation-delay:.025s}
+body.is-ready .home-banner-content>*:nth-child(3){animation-delay:.05s}
+body.is-ready .home-banner-content>*:nth-child(4){animation-delay:.075s}
+@keyframes ecisHeroPerf{from{transform:translateY(4px)}to{transform:none}}
+
+/* Navegación: se conserva la estética original de ECIS.
+   Aula ECIS mantiene prioridad mediante los CTA del contenido, no mediante el header. */
+
+/* El navegador puede omitir render de bloques muy alejados hasta que se aproximan. */
+@supports (content-visibility:auto){
+  .home-values,.home-experience,.formats-section,.institution-band,
+  .sources-reference-section,.team-section,.philosophy-band,.contact-section,
+  .legal-section,.checkout-section{
+    content-visibility:auto;
+    contain-intrinsic-size:auto 620px;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  body.is-ready .home-banner-content>*{animation:none!important}
 }

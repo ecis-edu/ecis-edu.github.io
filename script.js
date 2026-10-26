@@ -1267,26 +1267,7 @@ function initializeArtDirection109() {
     targets.forEach(el => observer.observe(el));
   } else targets.forEach(el => el.classList.add('is-revealed'));
 
-  const parallaxImages = Array.from(document.querySelectorAll('.hero-media img, .profile-editorial-image img, .course-image img'));
-  if (parallaxImages.length && window.matchMedia('(min-width: 701px)').matches) {
-    let ticking = false;
-    const update = () => {
-      const vh = window.innerHeight || 800;
-      parallaxImages.forEach(img => {
-        const holder = img.closest('.parallax-media');
-        if (!holder) return;
-        const rect = holder.getBoundingClientRect();
-        if (rect.bottom < 0 || rect.top > vh) return;
-        const progress = (rect.top + rect.height / 2 - vh / 2) / vh;
-        img.style.transform = `scale(1.035) translate3d(0, ${progress * -10}px, 0)`;
-      });
-      ticking = false;
-    };
-    window.addEventListener('scroll', () => {
-      if (!ticking) { requestAnimationFrame(update); ticking = true; }
-    }, { passive: true });
-    update();
-  }
+
 }
 
 function initializePremiumMicroInteractions() {
@@ -1312,5 +1293,9 @@ function initializePremiumMicroInteractions() {
 initializeInputGuards();
 initializeNetworkStatus();
 initializeArtDirection109();
-initializePremiumMicroInteractions();
+if ('requestIdleCallback' in window) {
+  requestIdleCallback(() => initializePremiumMicroInteractions(), { timeout: 1600 });
+} else {
+  window.setTimeout(() => initializePremiumMicroInteractions(), 900);
+}
 initializePaymentPage();
