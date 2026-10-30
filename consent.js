@@ -1,5 +1,7 @@
-// ECIS 129.9 — consentimiento analítico + Google Analytics 4 + Microsoft Clarity
-// Implementación básica: GA4 y Clarity NO se cargan antes del consentimiento.
+// ECIS 130.0 — consentimiento analítico + Google Analytics 4 + Microsoft Clarity
+// GA4 permanece sin cargar hasta consentimiento.
+// Clarity carga en Consent Mode con analítica/publicidad denegadas por defecto;
+// la funcionalidad analítica completa se habilita solo tras aceptación.
 
 (() => {
   'use strict';
@@ -25,7 +27,7 @@
     window.gtag = window.gtag || function(){ window.dataLayer.push(arguments); };
   }
 
-  function setConsentDefault() {
+  function setGoogleConsentDefault() {
     ensureDataLayer();
     window.gtag('consent', 'default', {
       analytics_storage: 'denied',
@@ -42,7 +44,7 @@
     if (gaRequested) return;
     gaRequested = true;
 
-    setConsentDefault();
+    setGoogleConsentDefault();
     window.gtag('consent', 'update', {
       analytics_storage: 'granted',
       ad_storage: 'denied',
@@ -69,30 +71,26 @@
     };
   }
 
-  function loadClarity() {
+  function setClarityConsent(analyticsGranted) {
+    ensureClarityQueue();
+    window.clarity('consentv2', {
+      analytics_storage: analyticsGranted ? 'granted' : 'denied',
+      ad_storage: 'denied'
+    });
+  }
+
+  function initClarityConsentMode() {
     if (clarityRequested) return;
     clarityRequested = true;
 
-    ensureClarityQueue();
-    // ECIS usa Clarity solo con fines analíticos; publicidad permanece denegada.
-    window.clarity('consentv2', {
-      ad_Storage: 'denied',
-      analytics_Storage: 'granted'
-    });
+    // Debe existir antes de cargar la etiqueta: por defecto no hay consentimiento analítico.
+    setClarityConsent(false);
 
     const script = document.createElement('script');
     script.async = true;
     script.src = `https://www.clarity.ms/tag/${encodeURIComponent(CLARITY_ID)}`;
     script.dataset.ecisAnalytics = 'clarity';
     document.head.appendChild(script);
-  }
-
-  function disableClarity() {
-    if (!window.clarity) return;
-    window.clarity('consentv2', {
-      ad_Storage: 'denied',
-      analytics_Storage: 'denied'
-    });
   }
 
   function disableGA4() {
@@ -104,7 +102,6 @@
         ad_personalization: 'denied'
       });
     }
-    // Elimina cookies de Analytics accesibles desde este dominio si existieran.
     try {
       document.cookie.split(';').forEach(cookie => {
         const name = cookie.split('=')[0].trim();
@@ -122,14 +119,14 @@
   function acceptAnalytics() {
     setStoredConsent(CONSENT_ACCEPTED);
     loadGA4();
-    loadClarity();
+    setClarityConsent(true);
     hideBanner();
   }
 
   function declineAnalytics() {
     setStoredConsent(CONSENT_DENIED);
     disableGA4();
-    disableClarity();
+    setClarityConsent(false);
     hideBanner();
   }
 
@@ -147,7 +144,7 @@
         <div class="ecis-consent__copy">
           <p class="ecis-consent__eyebrow">PRIVACIDAD</p>
           <p class="ecis-consent__title">Analíticas opcionales</p>
-          <p class="ecis-consent__text">ECIS puede usar Google Analytics y Microsoft Clarity para conocer cómo se utiliza el sitio y mejorar Aula ECIS. Estas analíticas se activan únicamente si las aceptás.</p>
+          <p class="ecis-consent__text">ECIS utiliza Google Analytics y Microsoft Clarity para comprender el uso del sitio y mejorar Aula ECIS. Google Analytics se activa solo si aceptás; Clarity permanece sin cookies y con funcionalidad limitada hasta que otorgues consentimiento.</p>
           <a class="ecis-consent__link" href="privacidad.html">Ver política de privacidad</a>
         </div>
         <div class="ecis-consent__actions">
@@ -205,10 +202,15 @@
     }, { passive: true });
   }
 
+  // Clarity debe poder verificar la instalación, pero comienza sin consentimiento analítico.
+  initClarityConsentMode();
+
   const stored = getStoredConsent();
   if (stored === CONSENT_ACCEPTED) {
     loadGA4();
-    loadClarity();
+    setClarityConsent(true);
+  } else {
+    setClarityConsent(false);
   }
 
   if (document.readyState === 'loading') {
