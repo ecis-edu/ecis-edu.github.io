@@ -1,14 +1,16 @@
-// ECIS 129.8 — consentimiento analítico + Google Analytics 4
-// Implementación básica: la etiqueta de Google NO se carga antes del consentimiento.
+// ECIS 129.9 — consentimiento analítico + Google Analytics 4 + Microsoft Clarity
+// Implementación básica: GA4 y Clarity NO se cargan antes del consentimiento.
 
 (() => {
   'use strict';
 
   const GA_ID = 'G-HVW0S36Z6E';
-  const CONSENT_KEY = 'ecis_analytics_consent_v1';
+  const CLARITY_ID = 'z5x7zpm7he';
+  const CONSENT_KEY = 'ecis_analytics_consent_v2';
   const CONSENT_ACCEPTED = 'accepted';
   const CONSENT_DENIED = 'denied';
   let gaRequested = false;
+  let clarityRequested = false;
 
   function getStoredConsent() {
     try { return localStorage.getItem(CONSENT_KEY); } catch (_) { return null; }
@@ -61,6 +63,38 @@
     document.head.appendChild(script);
   }
 
+  function ensureClarityQueue() {
+    window.clarity = window.clarity || function(){
+      (window.clarity.q = window.clarity.q || []).push(arguments);
+    };
+  }
+
+  function loadClarity() {
+    if (clarityRequested) return;
+    clarityRequested = true;
+
+    ensureClarityQueue();
+    // ECIS usa Clarity solo con fines analíticos; publicidad permanece denegada.
+    window.clarity('consentv2', {
+      ad_Storage: 'denied',
+      analytics_Storage: 'granted'
+    });
+
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.clarity.ms/tag/${encodeURIComponent(CLARITY_ID)}`;
+    script.dataset.ecisAnalytics = 'clarity';
+    document.head.appendChild(script);
+  }
+
+  function disableClarity() {
+    if (!window.clarity) return;
+    window.clarity('consentv2', {
+      ad_Storage: 'denied',
+      analytics_Storage: 'denied'
+    });
+  }
+
   function disableGA4() {
     if (window.gtag) {
       window.gtag('consent', 'update', {
@@ -88,12 +122,14 @@
   function acceptAnalytics() {
     setStoredConsent(CONSENT_ACCEPTED);
     loadGA4();
+    loadClarity();
     hideBanner();
   }
 
   function declineAnalytics() {
     setStoredConsent(CONSENT_DENIED);
     disableGA4();
+    disableClarity();
     hideBanner();
   }
 
@@ -111,7 +147,7 @@
         <div class="ecis-consent__copy">
           <p class="ecis-consent__eyebrow">PRIVACIDAD</p>
           <p class="ecis-consent__title">Analíticas opcionales</p>
-          <p class="ecis-consent__text">ECIS puede usar Google Analytics para conocer cómo se utiliza el sitio y mejorar Aula ECIS. La analítica se activa únicamente si la aceptás.</p>
+          <p class="ecis-consent__text">ECIS puede usar Google Analytics y Microsoft Clarity para conocer cómo se utiliza el sitio y mejorar Aula ECIS. Estas analíticas se activan únicamente si las aceptás.</p>
           <a class="ecis-consent__link" href="privacidad.html">Ver política de privacidad</a>
         </div>
         <div class="ecis-consent__actions">
@@ -170,7 +206,10 @@
   }
 
   const stored = getStoredConsent();
-  if (stored === CONSENT_ACCEPTED) loadGA4();
+  if (stored === CONSENT_ACCEPTED) {
+    loadGA4();
+    loadClarity();
+  }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
