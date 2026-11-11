@@ -1,4 +1,4 @@
-// ECIS 129.7 — núcleo liviano para páginas estáticas
+// ECIS 132.0 — núcleo liviano para páginas estáticas
 // Navegación, contacto y movimiento editorial esencial.
 
 document.querySelectorAll('#year').forEach(el => {
@@ -87,6 +87,19 @@ window.addEventListener('resize', () => {
 
 const contactForm = document.querySelector('.contact-form[data-formsubmit-ajax]');
 const formStatus = document.querySelector('#form-status');
+const contactFormUrl = document.querySelector('#contact-form-url');
+const contactFormNext = document.querySelector('#contact-form-next');
+
+if (contactForm) {
+  const cleanUrl = `${location.origin}${location.pathname}`;
+  if (contactFormUrl) contactFormUrl.value = cleanUrl;
+  if (contactFormNext) contactFormNext.value = `${cleanUrl}?enviado=1`;
+  const params = new URLSearchParams(location.search);
+  if (params.get('enviado') === '1' && formStatus) {
+    formStatus.textContent = 'Gracias por comunicarte con ECIS. Recibimos tu consulta y te responderemos a la brevedad.';
+    formStatus.hidden = false;
+  }
+}
 
 contactForm?.addEventListener('submit', async event => {
   event.preventDefault();
@@ -107,12 +120,15 @@ contactForm?.addEventListener('submit', async event => {
     submitButton.textContent = 'Enviando…';
   }
 
+  const controller = 'AbortController' in window ? new AbortController() : null;
+  const timeout = window.setTimeout(() => controller?.abort(), 12000);
   try {
     const payload = Object.fromEntries(new FormData(contactForm).entries());
     const response = await fetch(contactForm.dataset.formsubmitAjax, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: controller?.signal
     });
     let data = {};
     try { data = await response.json(); } catch (_) {}
@@ -125,14 +141,24 @@ contactForm?.addEventListener('submit', async event => {
       formStatus.hidden = false;
       formStatus.focus({ preventScroll: true });
     }
-  } catch (_) {
+  } catch (error) {
+    // Si el canal AJAX se corta (timeout, CORS o conectividad), usamos el POST
+    // HTML estándar de FormSubmit. Es menos elegante porque navega, pero evita
+    // que una consulta válida se pierda por un problema del navegador.
+    const networkLike = error?.name === 'AbortError' || navigator.onLine === false || error instanceof TypeError;
+    if (networkLike && navigator.onLine !== false) {
+      if (submitButton) submitButton.textContent = 'Enviando por canal alternativo…';
+      window.setTimeout(() => HTMLFormElement.prototype.submit.call(contactForm), 50);
+      return;
+    }
     if (formStatus) {
-      formStatus.textContent = 'Podés volver a enviar el mensaje o elegir correo electrónico o WhatsApp para continuar.';
+      formStatus.textContent = 'No pudimos enviar el mensaje en este momento. Podés reintentar o usar correo electrónico o WhatsApp.';
       formStatus.classList.add('is-error');
       formStatus.hidden = false;
       formStatus.focus({ preventScroll: true });
     }
   } finally {
+    window.clearTimeout(timeout);
     if (submitButton) {
       submitButton.disabled = false;
       submitButton.textContent = originalButtonText;

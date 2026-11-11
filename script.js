@@ -1,5 +1,5 @@
 // =========================================================
-// ECIS — clásica mejorada 127
+// ECIS 132.0 — flujo rápido y robusto
 // Base visual/textual pre-106 + movimiento sutil, acciones claras y tolerancia de red adaptativa
 // =========================================================
 
@@ -8,8 +8,8 @@ const ECIS_STORAGE_KEY = 'ecis_enrollment_draft';
 const ECIS_RESULT_KEY = 'ecis_enrollment_result';
 const ECIS_REGISTRATION_ATTEMPT_PREFIX = 'ecis_registration_attempt_';
 const ECIS_PAYMENT_STAGE_KEY = 'ecis_payment_stage';
-const ECIS_EXPERIENCES_CACHE_KEY = 'ecis_experiences_cache_v4';
-const ECIS_EXPERIENCES_CACHE_TTL = 30 * 60 * 1000;
+const ECIS_EXPERIENCES_CACHE_KEY = 'ecis_experiences_cache_v7';
+const ECIS_EXPERIENCES_CACHE_TTL = 60 * 1000;
 const ECIS_WHATSAPP = '5491173445804';
 const ECIS_EMAIL = 'ecis.ar.edu@gmail.com';
 const ECIS_MAX_AMOUNT = 1000000000;
@@ -25,9 +25,23 @@ document.querySelectorAll('#year').forEach(el => {
   el.textContent = new Date().getFullYear();
 });
 
+function isSensitiveStorageKey(key) {
+  return [ECIS_STORAGE_KEY, ECIS_RESULT_KEY, ECIS_PAYMENT_STAGE_KEY].includes(key) || String(key || '').startsWith(ECIS_REGISTRATION_ATTEMPT_PREFIX);
+}
+
 function readJsonStorage(key) {
   try {
-    const raw = localStorage.getItem(key) || sessionStorage.getItem(key);
+    let raw = sessionStorage.getItem(key);
+    if (!raw && isSensitiveStorageKey(key)) {
+      // Compatibilidad con versiones anteriores: migramos y eliminamos el dato personal persistente.
+      raw = localStorage.getItem(key);
+      if (raw) {
+        sessionStorage.setItem(key, raw);
+        localStorage.removeItem(key);
+      }
+    } else if (!raw) {
+      raw = localStorage.getItem(key);
+    }
     return raw ? JSON.parse(raw) : null;
   } catch (_) {
     return null;
@@ -36,8 +50,12 @@ function readJsonStorage(key) {
 
 function writeJsonStorage(key, value) {
   const raw = JSON.stringify(value);
+  if (isSensitiveStorageKey(key)) {
+    try { sessionStorage.setItem(key, raw); } catch (_) {}
+    try { localStorage.removeItem(key); } catch (_) {}
+    return;
+  }
   try { localStorage.setItem(key, raw); } catch (_) {}
-  try { sessionStorage.setItem(key, raw); } catch (_) {}
 }
 
 function removeStorage(key) {
@@ -157,8 +175,8 @@ function getNetworkProfile() {
   // Una respuesta rápida avanza inmediatamente; una señal lenta dispone de
   // una ventana amplia para recuperar el mismo registro sin duplicarlo.
   return {
-    requestTimeout: slow ? 32000 : (fast ? 8000 : 16000),
-    registrationWindow: slow ? 10 * 60 * 1000 : 7 * 60 * 1000,
+    requestTimeout: slow ? 18000 : (fast ? 7000 : 12000),
+    registrationWindow: slow ? 120000 : 75000,
     slow,
     fast
   };
@@ -169,7 +187,7 @@ function adaptiveDelay(attempt) {
   return steps[Math.min(attempt, steps.length - 1)];
 }
 
-function waitForConnection(maxMs = 120000) {
+function waitForConnection(maxMs = 20000) {
   if (navigator.onLine !== false) return Promise.resolve();
   return new Promise(resolve => {
     const done = () => {
@@ -292,6 +310,7 @@ function normalizeEnrollmentData(data) {
     dni: normalizeIdentityDocument(data.documento ?? data.dni),
     telefono: normalizeInternationalPhone(data.telefono),
     email: String(data.email || '').trim(),
+    pais: String(data.pais || 'Argentina').trim() || 'Argentina',
     institucion: String(data.institucion || '').trim()
   };
 }
@@ -530,8 +549,12 @@ function formatEditionLabel(edition) {
 
 function renderMasterclassEditions() {
   if (!masterclassEditions) return;
-  const experienceId = masterclassEditions.dataset.experienceId || 'HM001';
-  const experience = findExperience(experienceId);
+  const preferredExperienceId = masterclassEditions.dataset.experienceId || 'HM001';
+  const experience = findExperience(preferredExperienceId)
+    || loadedExperiences.find(item => String(item.tipo || '').trim().toLowerCase() === 'masterclass')
+    || loadedExperiences[0]
+    || null;
+  const experienceId = experience?.id || preferredExperienceId;
   const editions = Array.isArray(experience?.ediciones) ? experience.ediciones : [];
   const available = editions.filter(edition => edition.disponible !== false);
 
@@ -658,12 +681,26 @@ async function loadAvailability() {
 
 async function initializeMasterclassDates() {
   if (!masterclassEditions) return;
+  const cached = readExperiencesCache();
+  if (cached.length) {
+    loadedExperiences = cached;
+    renderMasterclassEditions();
+    if (masterclassEditionsNote) masterclassEditionsNote.textContent = 'Actualizando disponibilidad…';
+  }
   try {
-    await loadAvailability();
+    await waitForConnection();
+    const fresh = await loadExperiencesJsonp();
+    loadedExperiences = fresh;
+    writeExperiencesCache(fresh);
     renderMasterclassEditions();
   } catch (_) {
-    masterclassEditions.innerHTML = '<div class="course-editions-empty"><strong>No pudimos actualizar las fechas.</strong><span>Volvé a intentarlo en unos minutos.</span></div>';
-    if (masterclassDateCount) masterclassDateCount.textContent = 'Disponibilidad no disponible';
+    if (!loadedExperiences.length) {
+      masterclassEditions.innerHTML = '<div class="course-editions-empty"><strong>No pudimos actualizar las fechas.</strong><span>Verificá tu conexión y recargá la página.</span></div>';
+      if (masterclassDateCount) masterclassDateCount.textContent = 'Disponibilidad no disponible';
+      if (masterclassPrice) masterclassPrice.textContent = 'Consultar';
+    } else if (masterclassEditionsNote) {
+      masterclassEditionsNote.textContent = 'Mostramos la última disponibilidad guardada. La fecha se vuelve a validar al inscribirte.';
+    }
   }
 }
 
@@ -673,7 +710,7 @@ function restoreEnrollmentDraft() {
   if (!draft) return;
   const mapping = {
     nombre: '#enroll-name', apellido: '#enroll-last-name', email: '#enroll-email',
-    documento: '#enroll-document', telefono: '#enroll-phone'
+    documento: '#enroll-document', telefono: '#enroll-phone', pais: '#enroll-country'
   };
   Object.entries(mapping).forEach(([key, selector]) => {
     const input = document.querySelector(selector);
@@ -733,7 +770,7 @@ async function waitForRegistration(registroId, predicate, totalMs = getNetworkPr
     }
     await new Promise(resolve => window.setTimeout(resolve, adaptiveDelay(attempt++)));
   }
-  const error = new Error('La inscripción quedó guardada. Podés reintentar sin duplicarla.');
+  const error = new Error('No recibimos la confirmación a tiempo. Podés tocar “Continuar al pago” otra vez: el reintento usa el mismo identificador y no duplica la inscripción.');
   error.recoverable = true;
   throw error;
 }
@@ -749,6 +786,8 @@ function postActionAndWait(payload, predicate, onProgress = () => {}) {
       handler(value);
     };
     const onMessage = event => {
+      const allowedOrigins = ['https://script.google.com', 'https://script.googleusercontent.com'];
+      if (event.origin && event.origin !== 'null' && !allowedOrigins.some(origin => event.origin === origin || event.origin.endsWith('.googleusercontent.com'))) return;
       const data = event?.data;
       if (!data || data.source !== 'ecis-registration') return;
       const responseRequestId = String(data.solicitudRegistroId || data.registroId || '');
@@ -865,6 +904,7 @@ async function initializeEnrollmentPage() {
       email: document.querySelector('#enroll-email')?.value || '',
       documento: document.querySelector('#enroll-document')?.value || '',
       telefono: document.querySelector('#enroll-phone')?.value || '',
+      pais: document.querySelector('#enroll-country')?.value || 'Argentina',
       institucion: '',
       experienciaId: experience.id,
       experiencia: experience.nombre,
@@ -878,28 +918,34 @@ async function initializeEnrollmentPage() {
 
     const attemptKey = ECIS_REGISTRATION_ATTEMPT_PREFIX + 'inscripcion';
     const fingerprintKey = attemptKey + '_fingerprint';
-    const fingerprint = [data.email.toLowerCase(), data.documento, data.experienciaId, data.edicionId].join('|');
+    const fingerprint = [data.email.toLowerCase(), data.pais, data.documento, data.experienciaId, data.edicionId].join('|');
     let registroId = '';
     try {
-      const savedFingerprint = localStorage.getItem(fingerprintKey) || '';
-      if (savedFingerprint === fingerprint) registroId = localStorage.getItem(attemptKey) || '';
+      const savedFingerprint = sessionStorage.getItem(fingerprintKey) || '';
+      if (savedFingerprint === fingerprint) registroId = sessionStorage.getItem(attemptKey) || '';
     } catch (_) {}
     if (!registroId) {
       registroId = createRegistrationAttemptId();
       try {
-        localStorage.setItem(attemptKey, registroId);
-        localStorage.setItem(fingerprintKey, fingerprint);
+        sessionStorage.setItem(attemptKey, registroId);
+        sessionStorage.setItem(fingerprintKey, fingerprint);
       } catch (_) {}
     }
 
-    const originalText = enrollmentSubmit?.textContent || 'Iniciar inscripción y continuar al pago →';
-    if (enrollmentSubmit) { enrollmentSubmit.disabled = true; enrollmentSubmit.textContent = 'Iniciando tu inscripción…'; }
+    const originalText = enrollmentSubmit?.textContent || 'Continuar al pago →';
+    if (navigator.onLine === false) {
+      setError(enrollmentError, 'No hay conexión a internet. Cuando vuelva la conexión, tocá “Continuar al pago” nuevamente.');
+      return;
+    }
+    if (enrollmentSubmit) { enrollmentSubmit.disabled = true; enrollmentSubmit.textContent = 'Guardando inscripción…'; }
 
     try {
       const response = await postActionAndWait({
         accion: 'crear_inscripcion', registroId,
-        nombre: data.nombre, apellido: data.apellido, documento: data.documento, dni: data.documento, email: data.email,
-        telefono: data.telefono, institucion: '', experienciaId: data.experienciaId, edicionId: data.edicionId
+        nombre: data.nombre, apellido: data.apellido, documento: data.documento, dni: data.documento, pais: data.pais, email: data.email,
+        telefono: data.telefono, institucion: '', experienciaId: data.experienciaId, edicionId: data.edicionId,
+        aceptaLegal: document.querySelector('#enroll-legal-acceptance')?.checked ? 'si' : '',
+        versionCondiciones: '2026-11-05-v5', versionPrivacidad: '2026-11-05-v3'
       }, result => Boolean(result.codigo) && typeof result.emailEnviado === 'boolean', elapsed => {
         if (!enrollmentSubmit) return;
         if (navigator.onLine === false) enrollmentSubmit.textContent = 'Esperando conexión…';
@@ -916,8 +962,8 @@ async function initializeEnrollmentPage() {
       writeJsonStorage(ECIS_STORAGE_KEY, data);
       writeJsonStorage(ECIS_RESULT_KEY, { codigo: data.codigo, registroId: canonicalRegistroId, experienciaId: data.experienciaId, edicionId: data.edicionId, email: data.email, emailEnviado: data.emailEnviado });
       try {
-        localStorage.removeItem(ECIS_REGISTRATION_ATTEMPT_PREFIX + 'inscripcion');
-        localStorage.removeItem(ECIS_REGISTRATION_ATTEMPT_PREFIX + 'inscripcion_fingerprint');
+        sessionStorage.removeItem(ECIS_REGISTRATION_ATTEMPT_PREFIX + 'inscripcion');
+        sessionStorage.removeItem(ECIS_REGISTRATION_ATTEMPT_PREFIX + 'inscripcion_fingerprint');
       } catch (_) {}
 
       if (data.estado === 'Confirmada') {
@@ -1039,6 +1085,9 @@ function configureProofLinks(methodKey, methodLabel, whatsappLink, emailLink) {
     try {
       submitRegistrationThroughIframe({ accion: 'marcar_pago', registroId: paymentDraft.registroId, medioPago: methodKey });
       updatePaymentProgress(true);
+      const card = whatsappLink.closest('.checkout-card');
+      const finish = card?.querySelector('[data-proof-finish]');
+      if (finish) finish.hidden = false;
     } catch (_) {}
   };
   whatsappLink.onclick = mark;
@@ -1115,7 +1164,7 @@ async function recoverPaymentDraft(registroId) {
       nombre: server.nombre || '',
       apellido: server.apellido || '',
       email: server.email || '',
-      documento: server.documento || server.dni || '', dni: server.documento || server.dni || '', telefono: server.telefono || '', institucion: '',
+      documento: server.documento || server.dni || '', dni: server.documento || server.dni || '', pais: server.pais || 'Argentina', telefono: server.telefono || '', institucion: '',
       experienciaId: server.experienciaId,
       experiencia: server.experiencia,
       tipo: server.tipo || '',

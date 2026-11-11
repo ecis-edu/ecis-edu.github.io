@@ -1,7 +1,6 @@
-// ECIS 130.0 — consentimiento analítico + Google Analytics 4 + Microsoft Clarity
-// GA4 permanece sin cargar hasta consentimiento.
-// Clarity carga en Consent Mode con analítica/publicidad denegadas por defecto;
-// la funcionalidad analítica completa se habilita solo tras aceptación.
+// ECIS 132.0 — consentimiento analítico + Google Analytics 4 + Microsoft Clarity
+// GA4 y Clarity permanecen sin cargar hasta consentimiento analítico.
+// Esto reduce solicitudes externas y prioriza la carga de la experiencia principal.
 
 (() => {
   'use strict';
@@ -72,6 +71,7 @@
   }
 
   function setClarityConsent(analyticsGranted) {
+    if (!clarityRequested && !analyticsGranted) return;
     ensureClarityQueue();
     window.clarity('consentv2', {
       analytics_storage: analyticsGranted ? 'granted' : 'denied',
@@ -79,12 +79,11 @@
     });
   }
 
-  function initClarityConsentMode() {
-    if (clarityRequested) return;
+  function loadClarity() {
+    if (clarityRequested) { setClarityConsent(true); return; }
     clarityRequested = true;
-
-    // Debe existir antes de cargar la etiqueta: por defecto no hay consentimiento analítico.
-    setClarityConsent(false);
+    ensureClarityQueue();
+    window.clarity('consentv2', { analytics_storage: 'granted', ad_storage: 'denied' });
 
     const script = document.createElement('script');
     script.async = true;
@@ -119,7 +118,7 @@
   function acceptAnalytics() {
     setStoredConsent(CONSENT_ACCEPTED);
     loadGA4();
-    setClarityConsent(true);
+    loadClarity();
     hideBanner();
   }
 
@@ -144,7 +143,7 @@
         <div class="ecis-consent__copy">
           <p class="ecis-consent__eyebrow">PRIVACIDAD</p>
           <p class="ecis-consent__title">Analíticas opcionales</p>
-          <p class="ecis-consent__text">ECIS utiliza Google Analytics y Microsoft Clarity para comprender el uso del sitio y mejorar Aula ECIS. Google Analytics se activa solo si aceptás; Clarity permanece sin cookies y con funcionalidad limitada hasta que otorgues consentimiento.</p>
+          <p class="ecis-consent__text">ECIS utiliza Google Analytics y Microsoft Clarity para comprender el uso del sitio y mejorar Aula ECIS. Ambas herramientas se cargan únicamente si aceptás las analíticas.</p>
           <a class="ecis-consent__link" href="privacidad.html">Ver política de privacidad</a>
         </div>
         <div class="ecis-consent__actions">
@@ -202,13 +201,10 @@
     }, { passive: true });
   }
 
-  // Clarity debe poder verificar la instalación, pero comienza sin consentimiento analítico.
-  initClarityConsentMode();
-
   const stored = getStoredConsent();
   if (stored === CONSENT_ACCEPTED) {
     loadGA4();
-    setClarityConsent(true);
+    loadClarity();
   } else {
     setClarityConsent(false);
   }

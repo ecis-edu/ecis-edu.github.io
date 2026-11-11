@@ -2515,3 +2515,194 @@ body.is-ready .home-banner-content>*:nth-child(4){animation-delay:.075s}
 @media(prefers-reduced-motion:reduce){
   .ecis-consent,.ecis-consent *{scroll-behavior:auto!important;transition:none!important}
 }
+
+
+/* =========================================================
+   ECIS 131.0 — acceso legal + Gestiones ECIS
+   ========================================================= */
+.legal-access-strip{background:#f8f3ec;border-bottom:1px solid rgba(189,149,82,.32);color:#332a26}
+.legal-access-strip__inner{min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:20px;padding-top:6px;padding-bottom:6px}
+.legal-access-strip__label{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:#6e625b;font-weight:700;white-space:nowrap}
+.legal-access-strip__links{display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-wrap:wrap}
+.legal-access-link{display:inline-flex;align-items:center;min-height:30px;padding:6px 12px;border:1px solid rgba(116,16,24,.28);border-radius:999px;font-size:9.5px;letter-spacing:.07em;font-weight:800;color:#741018;text-decoration:none;background:rgba(255,255,255,.45);transition:background .2s ease,border-color .2s ease,transform .2s ease}
+.legal-access-link:hover,.legal-access-link:focus-visible{background:#fff;border-color:rgba(116,16,24,.62);transform:translateY(-1px)}
+
+.management-hero{padding:70px 0 48px;background:linear-gradient(135deg,#0d0d0d 0%,#171313 68%,#321014 100%);color:#fff;border-bottom:1px solid rgba(217,188,125,.28)}
+.management-hero .eyebrow{color:var(--gold-soft)}
+.management-hero h1{font:500 clamp(42px,5vw,72px)/.98 Georgia,"Times New Roman",serif;margin:12px 0 20px;max-width:800px;color:#fff}
+.management-hero p:not(.eyebrow){max-width:820px;color:rgba(255,255,255,.82);font-size:17px;line-height:1.7}
+.management-section{padding:58px 0 78px;background:var(--paper)}
+.management-layout{display:grid;grid-template-columns:minmax(250px,330px) minmax(0,760px);gap:34px;align-items:start;justify-content:center}
+.management-guide,.management-form-card{background:#fff;border:1px solid var(--line);box-shadow:0 18px 46px rgba(24,16,13,.06)}
+.management-guide{padding:26px 22px;position:sticky;top:106px}
+.management-guide h2{font:600 25px/1.1 Georgia,"Times New Roman",serif;margin:0 0 18px;color:#191514}
+.management-choice{display:block;padding:15px 14px;margin:0 0 10px;border:1px solid #e8ded4;text-decoration:none;background:#fcfaf7;transition:border-color .2s ease,background .2s ease,transform .2s ease}
+.management-choice strong{display:block;color:#741018;font-size:11px;letter-spacing:.04em;margin-bottom:5px}
+.management-choice span{display:block;color:#6c625b;font-size:12.5px;line-height:1.45}
+.management-choice:hover,.management-choice:focus-visible,.management-choice.is-active{border-color:rgba(189,149,82,.75);background:#fff;transform:translateY(-1px)}
+.management-choice.is-active{box-shadow:inset 3px 0 0 #741018}
+.management-guide-note{margin-top:20px;padding-top:18px;border-top:1px solid #eadfd5;color:#6b6058;font-size:12.5px;line-height:1.55}
+.management-guide-note strong{color:#2b2522}.management-guide-note p{margin:5px 0 0}
+.management-form-card{padding:34px 34px 38px}
+.management-form-head{margin-bottom:26px;padding-bottom:22px;border-bottom:1px solid #eadfd5}
+.management-form-head h2,.management-success h2{font:600 32px/1.1 Georgia,"Times New Roman",serif;color:#1a1716;margin:7px 0 9px}
+.management-form-head>p:not(.eyebrow){color:#73675f;line-height:1.6;margin:0}
+.form-grid-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.management-form-card .form-group{margin-bottom:17px}
+.management-form-card label{display:block;font-size:12px;font-weight:700;color:#3a312d;margin-bottom:7px}
+.management-form-card input,.management-form-card select,.management-form-card textarea{width:100%;border:1px solid #d9cec4;background:#fff;padding:12px 13px;font:inherit;color:#221e1c;border-radius:2px;outline:none}
+.management-form-card input:focus,.management-form-card select:focus,.management-form-card textarea:focus{border-color:#b89a58;box-shadow:0 0 0 3px rgba(184,154,88,.11)}
+.field-optional{font-weight:400;color:#8b817a}.form-honeypot{position:absolute!important;left:-9999px!important;width:1px!important;height:1px!important;opacity:0!important}
+.management-privacy-note{padding:13px 14px;margin:4px 0 17px;background:#f8f3ec;border-left:3px solid #b89a58;color:#6b6058;font-size:12px;line-height:1.5}
+.management-privacy-note a{color:#741018}
+.management-success{padding:18px 0 0;text-align:center}
+.management-code{display:inline-block;margin:20px auto 13px;padding:14px 20px;background:#f7f1e9;border:1px solid rgba(189,149,82,.55);font-size:22px;font-weight:800;letter-spacing:.06em;color:#741018}
+.management-success-note{max-width:590px;margin:18px auto 24px;color:#6e635c;font-size:13px;line-height:1.6}
+.management-success .button{margin:5px}
+.legal-check{display:flex!important;gap:10px;align-items:flex-start;font-weight:500!important;line-height:1.5}
+.legal-check input{width:18px!important;height:18px;flex:none;margin-top:2px}
+.legal-check a{color:#741018;font-weight:700}
+.checkout-legal-acceptance{margin:18px 0 14px;padding:15px;background:#faf6f0;border:1px solid #e7ddd2}
+.legal-notice{margin:22px 0;padding:18px 20px;border-left:3px solid #b89a58;background:#f8f3ec;color:#5f554f;font-size:12.5px;line-height:1.6}
+
+@media(max-width:860px){
+  .legal-access-strip__inner{align-items:flex-start;flex-direction:column;gap:6px;padding-top:8px;padding-bottom:9px}
+  .legal-access-strip__links{justify-content:flex-start;width:100%;gap:7px}
+  .legal-access-link{font-size:8.8px;padding:5px 9px}
+  .management-layout{grid-template-columns:1fr;max-width:760px}
+  .management-guide{position:static}
+}
+@media(max-width:600px){
+  .management-hero{padding:50px 0 37px}.management-section{padding:34px 0 54px}
+  .management-form-card{padding:24px 17px 28px}.management-guide{padding:20px 16px}
+  .form-grid-two{grid-template-columns:1fr;gap:0}
+  .management-form-head h2,.management-success h2{font-size:28px}
+  .legal-access-strip__label{display:none}
+  .legal-access-strip__links{display:grid;grid-template-columns:1fr 1fr}
+  .legal-access-link{justify-content:center;text-align:center;line-height:1.2}
+}
+@media(prefers-reduced-motion:reduce){.legal-access-link,.management-choice{transition:none!important}}
+
+.contact-row-static{cursor:default}.contact-row-static::after{display:none}.contact-row-static:hover{background:transparent;transform:none}.contact-row-static .contact-icon-big{font-family:Georgia,serif;font-size:18px;color:var(--burgundy)}.contact-legal-check{margin:12px 0 16px!important}
+
+
+/* ECIS 131.1.3 — Contacto simplificado y responsive */
+.contact-hours{
+  margin:18px 0 0;
+  padding:4px 0 0;
+  color:#746b64;
+  font-size:12.5px;
+  line-height:1.55;
+  letter-spacing:.01em;
+}
+.contact-hours span{
+  color:var(--burgundy);
+  font-weight:700;
+  margin-right:.35em;
+}
+@media(max-width:1100px){
+  .contact-info{padding-bottom:26px}
+  .contact-hours{margin-top:16px}
+}
+@media(max-width:700px){
+  .contact-section{padding-bottom:44px}
+  .contact-grid{gap:24px}
+  .contact-info{padding:18px 0 22px}
+  .contact-row{grid-template-columns:48px minmax(0,1fr);gap:13px;padding:14px 32px 14px 0}
+  .contact-icon-big{width:44px;height:44px}
+  .contact-icon-big .social-icon{width:21px;height:21px}
+  .contact-row strong{font-size:18px;line-height:1.2}
+  .contact-row small{font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+  .contact-row::after{right:2px;width:22px;height:22px}
+  .contact-hours{margin:14px 0 0;padding:0;font-size:11.8px;line-height:1.5}
+  .contact-form-wrap{padding-top:24px}
+  .form-title{font-size:27px}
+  .contact-form input,.contact-form textarea,.contact-form select{font-size:16px;min-height:46px}
+  .contact-form textarea{min-height:132px}
+  .contact-legal-check{font-size:12px!important}
+}
+@media(max-width:430px){
+  .contact-row{grid-template-columns:42px minmax(0,1fr);gap:11px;padding-right:28px}
+  .contact-icon-big{width:40px;height:40px}
+  .contact-row strong{font-size:17px}
+  .contact-row small{font-size:11.5px}
+  .contact-hours{font-size:11.3px}
+}
+@media(max-width:360px){
+  .contact-row{grid-template-columns:38px minmax(0,1fr);gap:10px;padding-right:26px}
+  .contact-icon-big{width:36px;height:36px}
+  .contact-row strong{font-size:16px}
+  .contact-row small{font-size:11px}
+}
+
+
+/* ECIS 131.2 — gestiones legales mínimas */
+.legal-access-strip__links{gap:0}
+.legal-access-link{min-height:auto;padding:3px 0;border:0;border-radius:0;background:transparent;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;font-size:9.5px;letter-spacing:.065em}
+.legal-access-link:hover,.legal-access-link:focus-visible{background:transparent;border-color:transparent;transform:none;color:#4e0b11}
+.legal-access-link + .legal-access-link::before{content:"·";display:inline-block;margin:0 10px;color:#a88954;text-decoration:none}
+.management-layout-single{display:block;max-width:760px;margin-left:auto;margin-right:auto}
+.management-layout-single .management-form-card{width:100%}
+@media(max-width:560px){
+  .legal-access-strip__links{display:flex;flex-wrap:wrap;gap:4px 0}
+  .legal-access-link{justify-content:flex-start;text-align:left;padding:3px 0;font-size:8.7px}
+  .legal-access-link + .legal-access-link::before{margin:0 7px}
+}
+
+
+/* ECIS 131.4 — política de devolución explícita y lenguaje claro */
+.management-type-explainer{
+  margin:-2px 0 18px;
+  padding:15px 17px;
+  border:1px solid #e7ddd2;
+  background:#fbf8f4;
+  color:#5f554f;
+  font-size:13px;
+  line-height:1.58;
+}
+.management-type-explainer strong{display:block;margin-bottom:4px;color:#2d2824;font-size:13px}
+.management-type-explainer p{margin:0}
+.management-refund-notice{
+  margin:0 0 20px;
+  padding:17px 18px;
+  border-left:3px solid var(--burgundy);
+  background:#f8f1ea;
+  color:#544b45;
+  font-size:13px;
+  line-height:1.62;
+}
+.management-refund-notice>strong{display:block;margin-bottom:5px;color:var(--burgundy);font-size:13px}
+.management-refund-notice p{margin:0}
+.management-refund-notice a{color:var(--burgundy);font-weight:700;text-underline-offset:2px}
+.checkout-policy-reminder{
+  display:grid;
+  gap:4px;
+  margin:17px 0 10px;
+  padding:13px 15px;
+  border-left:3px solid #b89a58;
+  background:#faf6f0;
+  color:#635952;
+  font-size:11.8px;
+  line-height:1.52;
+}
+.checkout-policy-reminder strong{color:#342d29;font-size:12px}
+.checkout-policy-reminder a{color:var(--burgundy);font-weight:700;text-underline-offset:2px}
+@media(max-width:600px){
+  .management-type-explainer,.management-refund-notice{padding:14px 14px;font-size:12.3px}
+  .checkout-policy-reminder{padding:12px 13px;font-size:11.4px}
+}
+
+
+.management-refund-rules{margin:.7rem 0 .85rem 1.15rem;padding:0}.management-refund-rules li{margin:.38rem 0;line-height:1.55}.management-refund-rules strong{color:inherit}@media(max-width:560px){.management-refund-rules{margin-left:1rem}.management-refund-notice{padding:1rem}}
+
+
+/* ECIS 131.5 · gestiones administrativas junto al footer */
+.legal-access-strip--footer{
+  border-top:1px solid rgba(189,149,82,.32);
+  border-bottom:0;
+}
+
+/* ECIS 132.1 — cierre simple después de enviar comprobante */
+.proof-finish{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px;padding-top:14px;border-top:1px solid #eadfd6;color:#6a5f57;font-size:12px;line-height:1.4}
+.proof-finish[hidden]{display:none!important}.proof-finish .button{margin:0;min-width:150px}
+@media(max-width:600px){.proof-finish{flex-direction:column;align-items:stretch;text-align:center}.proof-finish .button{width:100%}}
