@@ -11,7 +11,7 @@
 <meta content="https://ecis-edu.github.io/assets/images/ecis-web-preview.png" property="og:image"/><meta content="1200" property="og:image:width"/><meta content="630" property="og:image:height"/><meta content="ECIS · Educación en Control de Infecciones y Seguridad del Paciente" property="og:image:alt"/><meta content="summary_large_image" name="twitter:card"/><meta content="https://ecis-edu.github.io/assets/images/ecis-web-preview.png" name="twitter:image"/>
 <link href="assets/images/favicon.svg" rel="icon" type="image/svg+xml"/>
 <title>ECIS | Pago</title>
-<link crossorigin="anonymous" href="https://script.google.com" rel="preconnect"/><link crossorigin="anonymous" href="https://script.googleusercontent.com" rel="preconnect"/><link href="styles.css?v=20261111-1321" rel="stylesheet"/>
+<link crossorigin="anonymous" href="https://script.google.com" rel="preconnect"/><link crossorigin="anonymous" href="https://script.googleusercontent.com" rel="preconnect"/><link href="styles.css?v=20261112-1328" rel="stylesheet"/>
 </head>
 <body>
 <a class="skip-link" href="#contenido">Saltar al contenido</a>
@@ -39,7 +39,6 @@
 <div>
 <p class="eyebrow">INSCRIPCIÓN ECIS</p>
 <h1>Pago</h1>
-<p>Elegí cómo pagar y enviá el comprobante para completar la inscripción.</p>
 </div>
 <ol aria-label="Progreso de inscripción" class="checkout-progress">
 <li class="is-complete"><span>1</span><strong>Datos</strong></li>
@@ -51,8 +50,7 @@
 <section class="checkout-section">
 <div class="container checkout-narrow">
 <div class="checkout-card payment-loading-card" id="payment-loading">
-<p class="eyebrow">RECUPERANDO INSCRIPCIÓN</p>
-<h2>Preparando tu pago…</h2>
+<h2>Cargando datos…</h2>
 
 </div>
 <article class="checkout-card payment-status-card" hidden="" id="payment-status-card">
@@ -61,83 +59,76 @@
 <p id="payment-status-text"></p>
 <a class="button registration-secondary" href="experiencias.html">Volver a Aula ECIS</a>
 </article>
-<div hidden="" id="payment-flow">
-<article class="checkout-card registration-code-card">
+<div class="payment-flow-layout" hidden="" id="payment-flow">
+<article class="checkout-card registration-code-card checkout-card-compact">
 <div>
 <p class="eyebrow">TU N.º DE INSCRIPCIÓN ECIS</p>
 <div class="registration-code-row">
 <strong class="final-registration-code" id="payment-registration-code">ECIS-26-00000</strong>
 <button class="copy-code-button" id="copy-payment-code" type="button">Copiar</button>
 </div>
-<p class="registration-code-help" id="payment-code-help">Guardá este número para identificar tu inscripción.</p>
+
 </div>
 </article>
-<article class="checkout-card checkout-review-card">
+<article class="checkout-card checkout-review-card checkout-card-compact">
 <div class="checkout-card-head">
-<div><p class="eyebrow">RESUMEN</p><h2>Tu inscripción</h2></div>
-<a class="checkout-edit" href="inscripcion.html" id="payment-edit">Cambiar datos o fecha</a>
+<div><p class="eyebrow">RESUMEN</p><h2>Inscripción</h2></div>
+<a class="checkout-edit" href="inscripcion.html" id="payment-edit">Editar</a>
 </div>
 <div class="checkout-summary checkout-summary-compact" id="payment-summary"></div>
 </article>
-<article class="checkout-card checkout-payment-card" id="payment-method-card">
+<article class="checkout-card checkout-payment-card checkout-card-compact" id="payment-method-card">
 <div class="checkout-card-head checkout-card-head-simple">
-<div><p class="eyebrow">MEDIO DE PAGO</p><h2>¿Cómo querés pagar?</h2></div>
+<div><p class="eyebrow">MEDIO DE PAGO</p><h2>Elegí cómo pagar</h2></div>
 </div>
-<div class="payment-action-grid">
-<button class="payment-action-card" id="choose-transfer" type="button">
-<span aria-hidden="true" class="payment-method-mark">↗</span>
-<span><strong>Transferencia</strong><small>Ver alias, titular e importe</small></span>
+<div class="payment-action-grid payment-action-grid-minimal">
+<button class="payment-action-card payment-action-card-minimal" id="choose-transfer" type="button">
+<img class="payment-method-icon payment-method-icon-transfer" src="assets/images/icono-transferencia.webp" alt="" aria-hidden="true" width="56" height="56"/>
+<strong>Transferencia</strong>
 <span aria-hidden="true" class="payment-action-arrow">→</span>
 </button>
-<button class="payment-action-card" id="choose-mp" type="button">
-<span aria-hidden="true" class="payment-method-mark payment-method-mark-mp">MP</span>
-<span><strong>Mercado Pago / tarjeta</strong><small>Abrir el link oficial de pago</small></span>
+<button class="payment-action-card payment-action-card-minimal payment-action-card-mp" id="choose-mp" type="button">
+<img class="mp-brand-logo" src="assets/images/mercado-pago-logo.webp" alt="Mercado Pago" width="170" height="54"/>
 <span aria-hidden="true" class="payment-action-arrow">→</span>
 </button>
 </div>
 <div class="checkout-amount-row"><span>Importe</span><strong id="payment-amount">—</strong></div>
 </article>
 <article class="checkout-card transfer-checkout" hidden="" id="transfer-checkout">
-<div class="checkout-card-head checkout-card-head-simple">
-<div><p class="eyebrow">TRANSFERENCIA / BILLETERA VIRTUAL</p><h2>Datos para transferir</h2></div>
-</div>
+<div class="checkout-card-head checkout-card-head-simple payment-title-row"><img class="payment-title-icon-image" src="assets/images/icono-transferencia.webp" alt="" aria-hidden="true" width="58" height="58"/><div><p class="eyebrow">TRANSFERENCIA</p><h2>Datos de pago</h2></div></div>
 <div class="transfer-simple-grid">
-<div><span>Medio</span><strong>Ualá</strong></div>
+<div><span>Billetera</span><strong>Ualá</strong></div>
 <div><span>Titular</span><strong>Lucas Aranda Amarilla</strong></div>
 <div class="transfer-alias-row"><span>Alias</span><strong>lucas.eci</strong><button id="copy-transfer-alias" type="button">Copiar</button></div>
 <div><span>Importe</span><strong id="transfer-amount">—</strong></div>
 </div>
 <div class="proof-inline-block">
-<p>Enviá el comprobante para completar la inscripción.</p>
+<p><strong>Comprobante</strong></p>
 <div class="success-contact-actions">
-<a class="button button-primary" href="#" id="transfer-whatsapp-proof" rel="noopener noreferrer" target="_blank">Enviar comprobante por WhatsApp →</a>
-<a class="button registration-secondary" href="#" id="transfer-email-proof">Enviar por correo →</a>
+<a class="button button-primary" href="#" id="transfer-whatsapp-proof" rel="noopener noreferrer" target="_blank">WhatsApp →</a>
+<a class="button registration-secondary" href="#" id="transfer-email-proof">Correo →</a>
 </div>
-<small>Adjuntá el comprobante.</small>
-<div class="proof-finish" data-proof-finish hidden><span>Cuando termines, podés cerrar el proceso.</span><a class="button registration-secondary" href="index.html">Volver al inicio</a></div>
+<p class="proof-step-help">Después de pagar, enviá el comprobante por WhatsApp o correo. Así podemos identificar el pago y confirmar tu inscripción.</p>
+<div class="proof-finish" data-proof-finish hidden><a class="button registration-secondary" href="index.html">Volver al inicio</a></div>
 </div>
-<button class="checkout-step-back" data-payment-back="" type="button">← Elegir otro medio de pago</button>
+<button class="checkout-step-back" data-payment-back="" type="button">← Cambiar medio</button>
 </article>
 <article class="checkout-card mp-redirect-checkout" hidden="" id="mp-checkout">
-<div class="checkout-card-head checkout-card-head-simple">
-<div><p class="eyebrow">MERCADO PAGO / TARJETA</p><h2>Completá el pago en Mercado Pago</h2></div>
-</div>
+<div class="checkout-card-head checkout-card-head-simple mp-title-row"><img class="mp-header-logo" src="assets/images/mercado-pago-logo.webp" alt="Mercado Pago" width="190" height="60"/></div>
 <div class="mp-checkout-summary"><div><span>Importe</span><strong id="mp-checkout-amount">—</strong></div><div><span>Código ECIS</span><strong id="mp-checkout-code">—</strong></div></div>
-<div class="mp-hybrid-layout" id="mp-hybrid-options"><div class="mp-hybrid-action"><div class="mp-redirect-hero"><div aria-hidden="true" class="mp-redirect-icon">MP</div><div><strong>Link oficial de Mercado Pago</strong></div></div><a class="button button-primary checkout-primary mp-redirect-button" href="#" id="mp-redirect-button" rel="noopener noreferrer" target="_blank">Abrir Mercado Pago →</a></div>
-<div aria-label="Código QR para pagar con Mercado Pago" class="mp-hybrid-qr" id="mp-qr-container"><p class="eyebrow">DESDE UNA COMPUTADORA</p><img alt="Código QR del link de pago de Mercado Pago" decoding="async" height="220" id="mp-qr-image" loading="lazy" src="assets/images/mercadopago-link-qr.png" width="220"/><strong>Escaneá con tu celular</strong><button class="button registration-secondary mp-qr-continue" id="mp-qr-continue" type="button">Ya pagué · continuar →</button></div></div>
-<button class="checkout-step-back" data-payment-back="" type="button">← Elegir otro medio de pago</button>
+<div class="mp-hybrid-layout" id="mp-hybrid-options"><div class="mp-hybrid-action"><a class="button button-primary checkout-primary mp-redirect-button" href="#" id="mp-redirect-button" rel="noopener noreferrer" target="_blank">Pagar con Mercado Pago →</a></div>
+<div aria-label="Código QR para pagar con Mercado Pago" class="mp-hybrid-qr" id="mp-qr-container"><img alt="Código QR del link de pago de Mercado Pago" decoding="async" height="220" id="mp-qr-image" loading="lazy" src="assets/images/mercadopago-link-qr.png" width="220"/><strong>Escanear QR</strong><button class="button registration-secondary mp-qr-continue" id="mp-qr-continue" type="button">Ya pagué →</button></div></div>
+<button class="checkout-step-back" data-payment-back="" type="button">← Cambiar medio</button>
 </article>
 <article class="checkout-card mp-confirm-checkout" hidden="" id="mp-proof-checkout">
-<div class="checkout-card-head checkout-card-head-simple">
-<div><p class="eyebrow">COMPROBANTE</p><h2>Enviá tu comprobante</h2></div>
-</div>
+<div class="checkout-card-head checkout-card-head-simple"><div><h2>Comprobante</h2></div></div>
 <div class="success-contact-actions">
-<a class="button button-primary" href="#" id="mp-whatsapp-proof" rel="noopener noreferrer" target="_blank">Enviar comprobante por WhatsApp →</a>
-<a class="button registration-secondary" href="#" id="mp-email-proof">Enviar por correo →</a>
+<a class="button button-primary" href="#" id="mp-whatsapp-proof" rel="noopener noreferrer" target="_blank">WhatsApp →</a>
+<a class="button registration-secondary" href="#" id="mp-email-proof">Correo →</a>
 </div>
-<p class="proof-step-help">Adjuntá el comprobante.</p>
-<div class="proof-finish" data-proof-finish hidden><span>Cuando termines, podés cerrar el proceso.</span><a class="button registration-secondary" href="index.html">Volver al inicio</a></div>
-<button class="checkout-step-back" data-payment-back="" type="button">← Volver a medios de pago</button>
+<p class="proof-step-help">Después de pagar, enviá el comprobante por WhatsApp o correo. Así podemos identificar el pago y confirmar tu inscripción.</p>
+<div class="proof-finish" data-proof-finish hidden><a class="button registration-secondary" href="index.html">Volver al inicio</a></div>
+<button class="checkout-step-back" data-payment-back="" type="button">← Cambiar medio</button>
 </article>
 </div>
 <p class="checkout-error" hidden="" id="payment-load-error" role="alert"></p>
@@ -167,6 +158,6 @@
 <nav aria-label="Información legal" class="footer-links"><a href="privacidad.html">Privacidad</a><a href="condiciones.html">Condiciones de inscripción</a><a href="https://ecis-edu.github.io/ecis-verificador/" rel="noopener noreferrer" target="_blank">Verificar certificado</a></nav>
 </div></div>
 </footer>
-<script defer="" src="consent.js?v=20261111-1321"></script><script defer="" src="script.js?v=20261111-1321"></script>
+<script defer="" src="consent.js?v=20261112-1328"></script><script defer="" src="script.js?v=20261112-1328"></script>
 </body>
 </html>

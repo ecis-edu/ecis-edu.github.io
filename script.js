@@ -8,8 +8,8 @@ const ECIS_STORAGE_KEY = 'ecis_enrollment_draft';
 const ECIS_RESULT_KEY = 'ecis_enrollment_result';
 const ECIS_REGISTRATION_ATTEMPT_PREFIX = 'ecis_registration_attempt_';
 const ECIS_PAYMENT_STAGE_KEY = 'ecis_payment_stage';
-const ECIS_EXPERIENCES_CACHE_KEY = 'ecis_experiences_cache_v7';
-const ECIS_EXPERIENCES_CACHE_TTL = 60 * 1000;
+const ECIS_EXPERIENCES_CACHE_KEY = 'ecis_experiences_cache_v8';
+const ECIS_EXPERIENCES_CACHE_TTL = 5 * 60 * 1000;
 const ECIS_WHATSAPP = '5491173445804';
 const ECIS_EMAIL = 'ecis.ar.edu@gmail.com';
 const ECIS_MAX_AMOUNT = 1000000000;
@@ -111,7 +111,7 @@ function isValidEcisAmount(value) {
 function formatArs(value) {
   const number = Number(value);
   if (!isValidEcisAmount(number)) return '—';
-  return `ARS $${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(number)}`;
+  return `$ ${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(number)}`;
 }
 
 function escapeHtml(value) {
@@ -132,6 +132,17 @@ function setError(element, message) {
 function prefersReducedMotion() {
   return Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 }
+
+function isLowPowerDevice() {
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const saveData = Boolean(connection?.saveData);
+  const memory = Number(navigator.deviceMemory || 0);
+  const cores = Number(navigator.hardwareConcurrency || 0);
+  return saveData || (memory > 0 && memory <= 4) || (cores > 0 && cores <= 4) || prefersReducedMotion();
+}
+
+if (isLowPowerDevice()) document.documentElement.classList.add('ecis-low-power');
+
 
 function smoothScrollTo(element, block = 'start') {
   if (!element) return;
@@ -175,8 +186,8 @@ function getNetworkProfile() {
   // Una respuesta rápida avanza inmediatamente; una señal lenta dispone de
   // una ventana amplia para recuperar el mismo registro sin duplicarlo.
   return {
-    requestTimeout: slow ? 18000 : (fast ? 7000 : 12000),
-    registrationWindow: slow ? 120000 : 75000,
+    requestTimeout: slow ? 12000 : (fast ? 4500 : 8000),
+    registrationWindow: slow ? 60000 : 40000,
     slow,
     fast
   };
@@ -421,8 +432,11 @@ contactForm?.addEventListener('submit', async event => {
     const formData = new FormData(contactForm);
     const payload = Object.fromEntries(formData.entries());
 
+    const controller = new AbortController();
+    const contactTimeout = window.setTimeout(() => controller.abort(), 8000);
     const response = await fetch(contactForm.dataset.formsubmitAjax, {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -430,6 +444,7 @@ contactForm?.addEventListener('submit', async event => {
       body: JSON.stringify(payload)
     });
 
+    window.clearTimeout(contactTimeout);
     let data = {};
     try { data = await response.json(); } catch (_) {}
 
@@ -487,8 +502,57 @@ const registrationPostPayload = document.querySelector('#ecis-registration-paylo
 let loadedExperiences = [];
 let selectedEditionId = '';
 let registrationPostPromise = null;
+let experiencesWarmupStarted = false;
 
-function loadExperiencesJsonp(timeoutMs = getNetworkProfile().requestTimeout) {
+function warmExperiencesCache(force = false) {
+  if (experiencesWarmupStarted && !force) return;
+  experiencesWarmupStarted = true;
+  const start = () => {
+    loadExperiencesJsonp(Math.min(getNetworkProfile().requestTimeout, 6000))
+      .then(items => {
+        if (Array.isArray(items) && items.length) {
+          loadedExperiences = items;
+          writeExperiencesCache(items);
+        }
+      })
+      .catch(() => {});
+  };
+  if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 1200 });
+  else window.setTimeout(start, 180);
+}
+
+function consumePrefetchedExperiences() {
+  if (!window.__ecisExperiencesPrefetch) return null;
+  const data = window.__ecisExperiencesPrefetch;
+  if (!Array.isArray(data) || !data.length) return null;
+  try {
+    writeExperiencesCache(data);
+  } catch (_) {}
+  return data;
+}
+
+async function getPrefetchedExperiences(timeoutMs = 2200) {
+  const direct = consumePrefetchedExperiences();
+  if (direct) return direct;
+  const pending = window.__ecisExperiencesPrefetchPromise;
+  if (!pending) return null;
+  try {
+    const result = await Promise.race([
+      pending,
+      new Promise(resolve => window.setTimeout(() => resolve(null), timeoutMs))
+    ]);
+    if (Array.isArray(result) && result.length) {
+      writeExperiencesCache(result);
+      return result;
+    }
+  } catch (_) {}
+  return null;
+}
+
+async function loadExperiencesJsonp(timeoutMs = getNetworkProfile().requestTimeout) {
+  const prefetched = await getPrefetchedExperiences(Math.min(timeoutMs, 2200));
+  if (prefetched?.length) return prefetched;
+
   return new Promise((resolve, reject) => {
     const callbackName = `ecisExperiencias_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const script = document.createElement('script');
@@ -581,7 +645,16 @@ function renderMasterclassEditions() {
         <b>Completa</b>
       </div>`;
     }
-    return `<a class="course-edition-option" href="inscripcion.html?experiencia=${encodeURIComponent(experienceId)}&edicion=${encodeURIComponent(edition.id)}">
+    const quickParams = new URLSearchParams({
+      experiencia: String(experienceId || ''),
+      edicion: String(edition.id || ''),
+      nombre: String(experience?.nombre || ''),
+      fecha: String(edition.fecha || ''),
+      horario: String(edition.horario || ''),
+      modalidad: String(edition.modalidad || 'Virtual'),
+      importe: String(experience?.importe || '')
+    });
+    return `<a class="course-edition-option" href="inscripcion.html?${quickParams.toString()}">
       <span><strong>${escapeHtml(edition.fecha)}</strong><small>${escapeHtml(edition.horario || '')}${edition.modalidad ? ` · ${escapeHtml(edition.modalidad)}` : ''}${escapeHtml(extra)}</small></span>
       <b>Inscribirme →</b>
     </a>`;
@@ -656,6 +729,7 @@ function renderEditionPicker(experience, preferredEditionId = '') {
   editionPicker.querySelectorAll('input[name="edicion"]:not(:disabled)').forEach(input => {
     input.addEventListener('change', () => {
       selectedEditionId = String(input.value || '');
+      persistEnrollmentDraft();
       editionPicker.querySelectorAll('.edition-option').forEach(label => {
         label.classList.toggle('is-selected', label.querySelector('input')?.checked === true);
       });
@@ -685,7 +759,7 @@ async function initializeMasterclassDates() {
   if (cached.length) {
     loadedExperiences = cached;
     renderMasterclassEditions();
-    if (masterclassEditionsNote) masterclassEditionsNote.textContent = 'Actualizando disponibilidad…';
+    if (masterclassEditionsNote) masterclassEditionsNote.textContent = 'Disponibilidad actualizándose…';
   }
   try {
     await waitForConnection();
@@ -699,7 +773,7 @@ async function initializeMasterclassDates() {
       if (masterclassDateCount) masterclassDateCount.textContent = 'Disponibilidad no disponible';
       if (masterclassPrice) masterclassPrice.textContent = 'Consultar';
     } else if (masterclassEditionsNote) {
-      masterclassEditionsNote.textContent = 'Mostramos la última disponibilidad guardada. La fecha se vuelve a validar al inscribirte.';
+      masterclassEditionsNote.textContent = 'Mostramos la última disponibilidad guardada. La fecha se valida nuevamente al inscribirte.';
     }
   }
 }
@@ -715,8 +789,36 @@ function restoreEnrollmentDraft() {
   Object.entries(mapping).forEach(([key, selector]) => {
     const input = document.querySelector(selector);
     const value = key === 'documento' ? (draft.documento ?? draft.dni) : draft[key];
-    if (input && value != null) input.value = value;
+    if (input && value != null && !input.value) input.value = value;
   });
+  const legal = document.querySelector('#enroll-legal-acceptance');
+  if (legal && draft.aceptaLegal) legal.checked = true;
+}
+
+function persistEnrollmentDraft() {
+  if (!enrollmentForm) return;
+  const current = readJsonStorage(ECIS_STORAGE_KEY) || {};
+  const experience = findExperience(experienceSelect?.value || current.experienciaId || '');
+  const edition = findEdition(experience, selectedEditionId || current.edicionId || '');
+  const draft = {
+    ...current,
+    nombre: document.querySelector('#enroll-name')?.value || '',
+    apellido: document.querySelector('#enroll-last-name')?.value || '',
+    email: document.querySelector('#enroll-email')?.value || '',
+    documento: document.querySelector('#enroll-document')?.value || '',
+    telefono: document.querySelector('#enroll-phone')?.value || '',
+    pais: document.querySelector('#enroll-country')?.value || 'Argentina',
+    aceptaLegal: Boolean(document.querySelector('#enroll-legal-acceptance')?.checked),
+    experienciaId: experience?.id || current.experienciaId || '',
+    experiencia: experience?.nombre || current.experiencia || '',
+    tipo: experience?.tipo || current.tipo || '',
+    importe: Number(experience?.importe || current.importe || 0),
+    edicionId: edition?.id || current.edicionId || '',
+    fecha: edition?.fecha || current.fecha || '',
+    horario: edition?.horario || current.horario || '',
+    modalidad: edition?.modalidad || current.modalidad || 'Virtual'
+  };
+  writeJsonStorage(ECIS_STORAGE_KEY, draft);
 }
 
 function submitRegistrationThroughIframe(payload) {
@@ -805,14 +907,56 @@ function postActionAndWait(payload, predicate, onProgress = () => {}) {
   return registrationPostPromise;
 }
 
+
+function getQuickEnrollmentPreview(params) {
+  const experienciaId = params.get('experiencia') || '';
+  const edicionId = params.get('edicion') || '';
+  const nombre = params.get('nombre') || '';
+  const fecha = params.get('fecha') || '';
+  const horario = params.get('horario') || '';
+  const modalidad = params.get('modalidad') || 'Virtual';
+  const importe = Number(params.get('importe') || 0);
+  if (!experienciaId || !edicionId || !nombre || !fecha || !isValidEcisAmount(importe)) return null;
+  return {
+    id: experienciaId,
+    nombre,
+    tipo: 'Masterclass',
+    importe,
+    ediciones: [{ id: edicionId, fecha, horario, modalidad, disponible: true }]
+  };
+}
+
+function renderQuickEnrollmentPreview(params) {
+  const preview = getQuickEnrollmentPreview(params);
+  if (!preview) return null;
+  loadedExperiences = [preview];
+  selectedEditionId = String(preview.ediciones[0].id);
+  renderExperienceSelect(loadedExperiences, preview.id);
+  renderSelectedExperience(preview, preview.ediciones[0]);
+  if (experienceSelectorWrap) experienceSelectorWrap.hidden = true;
+  if (editionPicker) { editionPicker.hidden = true; editionPicker.innerHTML = ''; }
+  if (experienceHelp) experienceHelp.hidden = true;
+  const title = document.querySelector('#enrollment-choice-title');
+  const copy = document.querySelector('#enrollment-choice-copy');
+  if (title) title.textContent = 'Tu actividad';
+  if (copy) copy.textContent = '';
+  return preview;
+}
+
 async function initializeEnrollmentPage() {
   if (!enrollmentForm || !experienceSelect) return;
   restoreEnrollmentDraft();
+  enrollmentForm.querySelectorAll('input, select').forEach(field => {
+    field.addEventListener('input', persistEnrollmentDraft);
+    field.addEventListener('change', persistEnrollmentDraft);
+  });
   const params = new URLSearchParams(window.location.search);
   const savedDraft = readJsonStorage(ECIS_STORAGE_KEY);
+  if (enrollmentSubmit && savedDraft?.registroId && savedDraft?.codigo) enrollmentSubmit.textContent = 'Volver al pago →';
   const requestedExperience = params.get('experiencia') || savedDraft?.experienciaId || '';
   const requestedEdition = params.get('edicion') || savedDraft?.edicionId || '';
   const hasPublishedSelection = Boolean(params.get('experiencia') && params.get('edicion'));
+  const quickPreview = renderQuickEnrollmentPreview(params);
 
   // Si la persona llega desde una edición concreta de Aula ECIS, ocultamos
   // desde el primer instante los controles de selección. Solo se vuelven a
@@ -826,7 +970,19 @@ async function initializeEnrollmentPage() {
   try {
     experienceSelect.disabled = true;
     experienceSelect.innerHTML = '<option value="">Cargando actividad…</option>';
-    await loadAvailability();
+    if (quickPreview) {
+      try {
+        const fresh = await loadExperiencesJsonp(4500);
+        if (fresh?.length) {
+          loadedExperiences = fresh;
+          writeExperiencesCache(fresh);
+        }
+      } catch (_) {
+        loadedExperiences = [quickPreview];
+      }
+    } else {
+      await loadAvailability();
+    }
     const preferredExperience = requestedExperience || (loadedExperiences.length === 1 ? String(loadedExperiences[0].id) : '');
     renderExperienceSelect(loadedExperiences, preferredExperience);
 
@@ -854,7 +1010,8 @@ async function initializeEnrollmentPage() {
       const title = document.querySelector('#enrollment-choice-title');
       const copy = document.querySelector('#enrollment-choice-copy');
       if (title) title.textContent = 'Tu actividad seleccionada';
-      if (copy) copy.textContent = 'Revisá la edición elegida y completá tus datos para continuar.';
+      if (copy) copy.textContent = '';
+      persistEnrollmentDraft();
     } else {
       if (experienceSelectorWrap) experienceSelectorWrap.hidden = false;
       renderSelectedExperience(experience);
@@ -866,6 +1023,7 @@ async function initializeEnrollmentPage() {
           ? 'Elegí una fecha para continuar.'
           : 'Todavía no hay fechas habilitadas para esta actividad.';
       }
+      persistEnrollmentDraft();
     }
   } catch (error) {
     setError(enrollmentError, error.message);
@@ -879,6 +1037,7 @@ async function initializeEnrollmentPage() {
     renderSelectedExperience(experience);
     if (editionPicker) editionPicker.hidden = false;
     renderEditionPicker(experience, '');
+    persistEnrollmentDraft();
   });
 
   experienceRetry?.addEventListener('click', () => window.location.reload());
@@ -916,6 +1075,41 @@ async function initializeEnrollmentPage() {
       modalidad: edition.modalidad || 'Virtual'
     });
 
+    const existingDraft = normalizeEnrollmentData(readJsonStorage(ECIS_STORAGE_KEY));
+    const sameExistingRegistration = Boolean(
+      existingDraft?.registroId && existingDraft?.codigo &&
+      String(existingDraft.experienciaId || '') === String(data.experienciaId || '') &&
+      String(existingDraft.edicionId || '') === String(data.edicionId || '')
+    );
+    if (sameExistingRegistration) {
+      const changed = ['nombre','apellido','email','documento','telefono','pais'].some(key =>
+        String(existingDraft[key] || '').trim() !== String(data[key] || '').trim()
+      );
+      data.registroId = existingDraft.registroId;
+      data.codigo = existingDraft.codigo;
+      data.estado = existingDraft.estado || 'Pendiente de pago';
+      data.mercadoPagoUrl = existingDraft.mercadoPagoUrl || '';
+      data.mercadoPagoQr = existingDraft.mercadoPagoQr || '';
+      if (!changed) {
+        writeJsonStorage(ECIS_STORAGE_KEY, { ...existingDraft, ...data, aceptaLegal: true });
+        window.location.href = `pago.html?registro=${encodeURIComponent(existingDraft.registroId)}`;
+        return;
+      }
+      if (enrollmentSubmit) { enrollmentSubmit.disabled = true; enrollmentSubmit.textContent = 'Cargando datos…'; }
+      try {
+        const updated = await postActionAndWait({
+          accion: 'actualizar_inscripcion', registroId: existingDraft.registroId,
+          nombre: data.nombre, apellido: data.apellido, documento: data.documento, dni: data.documento, pais: data.pais, email: data.email, telefono: data.telefono
+        }, result => Boolean(result.codigo));
+        writeJsonStorage(ECIS_STORAGE_KEY, { ...existingDraft, ...data, codigo: updated.codigo || existingDraft.codigo, registroId: updated.registroId || existingDraft.registroId, aceptaLegal: true });
+        window.location.href = `pago.html?registro=${encodeURIComponent(updated.registroId || existingDraft.registroId)}`;
+      } catch (error) {
+        setError(enrollmentError, error?.message || 'No pudimos actualizar tus datos.');
+        if (enrollmentSubmit) { enrollmentSubmit.disabled = false; enrollmentSubmit.textContent = 'Continuar →'; }
+      }
+      return;
+    }
+
     const attemptKey = ECIS_REGISTRATION_ATTEMPT_PREFIX + 'inscripcion';
     const fingerprintKey = attemptKey + '_fingerprint';
     const fingerprint = [data.email.toLowerCase(), data.pais, data.documento, data.experienciaId, data.edicionId].join('|');
@@ -937,7 +1131,7 @@ async function initializeEnrollmentPage() {
       setError(enrollmentError, 'No hay conexión a internet. Cuando vuelva la conexión, tocá “Continuar al pago” nuevamente.');
       return;
     }
-    if (enrollmentSubmit) { enrollmentSubmit.disabled = true; enrollmentSubmit.textContent = 'Guardando inscripción…'; }
+    if (enrollmentSubmit) { enrollmentSubmit.disabled = true; enrollmentSubmit.textContent = 'Cargando datos…'; }
 
     try {
       const response = await postActionAndWait({
@@ -946,10 +1140,10 @@ async function initializeEnrollmentPage() {
         telefono: data.telefono, institucion: '', experienciaId: data.experienciaId, edicionId: data.edicionId,
         aceptaLegal: document.querySelector('#enroll-legal-acceptance')?.checked ? 'si' : '',
         versionCondiciones: '2026-11-05-v5', versionPrivacidad: '2026-11-05-v3'
-      }, result => Boolean(result.codigo) && typeof result.emailEnviado === 'boolean', elapsed => {
+      }, result => Boolean(result.codigo), elapsed => {
         if (!enrollmentSubmit) return;
         if (navigator.onLine === false) enrollmentSubmit.textContent = 'Esperando conexión…';
-        else if (elapsed > 12000) enrollmentSubmit.textContent = 'Guardando tu inscripción…';
+        else if (elapsed > 5500) enrollmentSubmit.textContent = 'Cargando datos…';
       });
 
       const canonicalRegistroId = String(response.registroId || registroId).trim();
@@ -959,6 +1153,7 @@ async function initializeEnrollmentPage() {
       data.emailEnviado = response.emailEnviado !== false;
       data.mercadoPagoUrl = String(response.mercadoPagoUrl || experience.mercadoPagoUrl || '').trim();
       data.mercadoPagoQr = String(response.mercadoPagoQr || experience.mercadoPagoQr || '').trim();
+      data.aceptaLegal = true;
       writeJsonStorage(ECIS_STORAGE_KEY, data);
       writeJsonStorage(ECIS_RESULT_KEY, { codigo: data.codigo, registroId: canonicalRegistroId, experienciaId: data.experienciaId, edicionId: data.edicionId, email: data.email, emailEnviado: data.emailEnviado });
       try {
@@ -1105,7 +1300,7 @@ function showPaymentChoice() {
   if (transferCheckout) transferCheckout.hidden = true;
   if (mpCheckout) mpCheckout.hidden = true;
   if (mpProofCheckout) mpProofCheckout.hidden = true;
-  removeStorage(ECIS_PAYMENT_STAGE_KEY);
+  writeJsonStorage(ECIS_PAYMENT_STAGE_KEY, { registroId: paymentDraft?.registroId || '', stage: 'choice' });
   updatePaymentProgress(false);
   smoothScrollTo(paymentMethodCard, 'start');
 }
@@ -1115,7 +1310,7 @@ function showTransferStep() {
   if (transferCheckout) transferCheckout.hidden = false;
   if (mpCheckout) mpCheckout.hidden = true;
   if (mpProofCheckout) mpProofCheckout.hidden = true;
-  removeStorage(ECIS_PAYMENT_STAGE_KEY);
+  writeJsonStorage(ECIS_PAYMENT_STAGE_KEY, { registroId: paymentDraft?.registroId || '', stage: 'transfer' });
   configureProofLinks('Transferencia', 'Transferencia', transferWhatsappProof, transferEmailProof);
   smoothScrollTo(transferCheckout, 'start');
 }
@@ -1130,7 +1325,7 @@ function showMpStep() {
   if (transferCheckout) transferCheckout.hidden = true;
   if (mpProofCheckout) mpProofCheckout.hidden = true;
   if (mpCheckout) mpCheckout.hidden = false;
-  removeStorage(ECIS_PAYMENT_STAGE_KEY);
+  writeJsonStorage(ECIS_PAYMENT_STAGE_KEY, { registroId: paymentDraft?.registroId || '', stage: 'mp' });
   smoothScrollTo(mpCheckout, 'start');
 }
 
@@ -1188,6 +1383,18 @@ async function recoverPaymentDraft(registroId) {
   }
 }
 
+function finalizeEnrollmentInBackground(registroId) {
+  if (!registroId) return;
+  const key = `ecis_finalized_${registroId}`;
+  try { if (sessionStorage.getItem(key) === '1') return; } catch (_) {}
+  window.setTimeout(() => {
+    try {
+      submitRegistrationThroughIframe({ accion: 'finalizar_inscripcion', registroId });
+      try { sessionStorage.setItem(key, '1'); } catch (_) {}
+    } catch (_) {}
+  }, 250);
+}
+
 async function initializePaymentPage() {
   if (!paymentLoading) return;
   const params = new URLSearchParams(window.location.search);
@@ -1199,6 +1406,19 @@ async function initializePaymentPage() {
   }
 
   try {
+    const storedDraft = normalizeEnrollmentData(readJsonStorage(ECIS_STORAGE_KEY));
+    if (storedDraft?.registroId === registroId && storedDraft?.codigo && storedDraft?.experienciaId && storedDraft?.edicionId && isValidEcisAmount(storedDraft?.importe)) {
+      paymentDraft = storedDraft;
+      renderPaymentSummary(paymentDraft);
+      if (paymentRegistrationCode) paymentRegistrationCode.textContent = paymentDraft.codigo;
+      if (mpCheckoutCode) mpCheckoutCode.textContent = paymentDraft.codigo;
+      if (paymentAmount) paymentAmount.textContent = formatArs(paymentDraft.importe);
+      if (transferAmount) transferAmount.textContent = formatArs(paymentDraft.importe);
+      if (mpCheckoutAmount) mpCheckoutAmount.textContent = formatArs(paymentDraft.importe);
+      paymentLoading.hidden = true;
+      paymentFlow.hidden = false;
+      finalizeEnrollmentInBackground(registroId);
+    }
     paymentDraft = await recoverPaymentDraft(registroId);
     if (!paymentDraft?.codigo || !paymentDraft?.experienciaId || !paymentDraft?.edicionId) throw new Error('Faltan datos para continuar con esta inscripción.');
     if (!isValidEcisAmount(paymentDraft.importe)) throw new Error('El importe de esta inscripción no es válido. ECIS debe corregirlo antes de continuar con el pago.');
@@ -1219,7 +1439,7 @@ async function initializePaymentPage() {
     if (paymentRegistrationCode) paymentRegistrationCode.textContent = paymentDraft.codigo;
     if (mpCheckoutCode) mpCheckoutCode.textContent = paymentDraft.codigo;
     if (paymentAmount) paymentAmount.textContent = formatArs(paymentDraft.importe);
-    if (paymentEdit) paymentEdit.href = `inscripcion.html?experiencia=${encodeURIComponent(paymentDraft.experienciaId)}&edicion=${encodeURIComponent(paymentDraft.edicionId)}`;
+    if (paymentEdit) paymentEdit.href = `inscripcion.html?experiencia=${encodeURIComponent(paymentDraft.experienciaId)}&edicion=${encodeURIComponent(paymentDraft.edicionId)}&registro=${encodeURIComponent(paymentDraft.registroId)}`;
     if (transferAmount) transferAmount.textContent = formatArs(paymentDraft.importe);
     if (mpCheckoutAmount) mpCheckoutAmount.textContent = formatArs(paymentDraft.importe);
     if (paymentCodeHelp && paymentDraft.emailEnviado === false) {
@@ -1235,9 +1455,12 @@ async function initializePaymentPage() {
     paymentLoading.hidden = true;
     paymentFlow.hidden = false;
 
+    finalizeEnrollmentInBackground(registroId);
     const savedPaymentStage = readJsonStorage(ECIS_PAYMENT_STAGE_KEY);
-    if (savedPaymentStage?.registroId === paymentDraft.registroId && savedPaymentStage?.stage === 'mp-proof') {
-      window.setTimeout(() => showMpProofStep({ persist: false }), 0);
+    if (savedPaymentStage?.registroId === paymentDraft.registroId) {
+      if (savedPaymentStage.stage === 'transfer') window.setTimeout(showTransferStep, 0);
+      else if (savedPaymentStage.stage === 'mp') window.setTimeout(showMpStep, 0);
+      else if (savedPaymentStage.stage === 'mp-proof') window.setTimeout(() => showMpProofStep({ persist: false }), 0);
     }
   } catch (error) {
     paymentLoading.hidden = true;
@@ -1274,6 +1497,7 @@ async function copyCodeFrom(element, button) {
 }
 copyPaymentCode?.addEventListener('click', () => copyCodeFrom(paymentRegistrationCode, copyPaymentCode));
 
+warmExperiencesCache();
 initializeMasterclassDates();
 initializeEnrollmentPage();
 
@@ -1295,7 +1519,7 @@ function initializeArtDirection109() {
     if (href === current) link.setAttribute('aria-current','page');
   });
 
-  if (prefersReducedMotion()) {
+  if (prefersReducedMotion() || isLowPowerDevice()) {
     document.querySelectorAll('.reveal,.lux-reveal').forEach(el => el.classList.add('is-revealed'));
     return;
   }
@@ -1320,7 +1544,7 @@ function initializeArtDirection109() {
 }
 
 function initializePremiumMicroInteractions() {
-  if (prefersReducedMotion()) return;
+  if (prefersReducedMotion() || isLowPowerDevice()) return;
   const finePointer = window.matchMedia?.('(hover:hover) and (pointer:fine)').matches;
   if (!finePointer) return;
 
@@ -1348,3 +1572,14 @@ if ('requestIdleCallback' in window) {
   window.setTimeout(() => initializePremiumMicroInteractions(), 900);
 }
 initializePaymentPage();
+
+window.addEventListener('pageshow', event => {
+  if (!enrollmentForm) return;
+  restoreEnrollmentDraft();
+  const draft = readJsonStorage(ECIS_STORAGE_KEY);
+  if (draft?.edicionId) selectedEditionId = String(draft.edicionId);
+  if (enrollmentSubmit) {
+    enrollmentSubmit.disabled = false;
+    enrollmentSubmit.textContent = draft?.registroId && draft?.codigo ? 'Volver al pago →' : 'Continuar →';
+  }
+});

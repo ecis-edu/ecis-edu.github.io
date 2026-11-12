@@ -1,3 +1,12 @@
+
+function ecisLowPowerDevice() {
+  const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const memory = Number(navigator.deviceMemory || 0);
+  const cores = Number(navigator.hardwareConcurrency || 0);
+  return Boolean(c?.saveData) || (memory > 0 && memory <= 4) || (cores > 0 && cores <= 4) || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+if (ecisLowPowerDevice()) document.documentElement.classList.add('ecis-low-power');
+
 // ECIS 132.0 — núcleo liviano para páginas estáticas
 // Navegación, contacto y movimiento editorial esencial.
 

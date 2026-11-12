@@ -2706,3 +2706,490 @@ body.is-ready .home-banner-content>*:nth-child(4){animation-delay:.075s}
 .proof-finish{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px;padding-top:14px;border-top:1px solid #eadfd6;color:#6a5f57;font-size:12px;line-height:1.4}
 .proof-finish[hidden]{display:none!important}.proof-finish .button{margin:0;min-width:150px}
 @media(max-width:600px){.proof-finish{flex-direction:column;align-items:stretch;text-align:center}.proof-finish .button{width:100%}}
+
+
+/* =========================================================
+   ECIS 132.2 — Checkout minimalista
+   ========================================================= */
+.checkout-page{background:#f7f5f2}
+.checkout-intro{padding:34px 0 22px;background:#fff;border-bottom:1px solid #ebe5de}
+.checkout-intro-inner{align-items:center}
+.checkout-intro h1{font-size:clamp(38px,5vw,58px);margin-bottom:0}
+.checkout-intro .eyebrow{margin-bottom:7px}
+.checkout-section{padding:28px 0 64px}
+.checkout-narrow{max-width:900px}
+.checkout-card{border:1px solid #e5dfd8;box-shadow:0 8px 28px rgba(24,17,12,.045);padding:28px 30px;border-radius:12px}
+.checkout-card+.checkout-card{margin-top:14px}
+.checkout-card h2{font-size:clamp(27px,3vw,36px)}
+.checkout-card-head{margin-bottom:18px}
+.checkout-card-head-simple{margin-bottom:16px}
+.checkout-card-head p:not(.eyebrow){display:none}
+.checkout-progress{gap:7px}
+.checkout-progress li{font-size:11px}
+.checkout-progress li+li::before{width:34px}
+.checkout-progress li span{width:27px;height:27px;font-size:11px}
+.checkout-form-grid{gap:14px 16px}
+.checkout-field{gap:6px}
+.checkout-field label{font-size:11px;color:#5f5751}
+.checkout-field input,.checkout-field select{min-height:48px;border-color:#ddd5ce;border-radius:8px;padding:11px 13px;background:#fff}
+.checkout-field-help:empty{display:none}
+.checkout-legal-acceptance{margin-top:18px;padding-top:0;border-top:0}
+.legal-check{font-size:11.5px!important;color:#6c645e!important}
+.checkout-primary{min-height:50px;margin-top:18px;border-radius:9px;font-size:14px}
+.enrollment-choice-card .checkout-card-head{margin-bottom:12px}
+.selected-experience-summary{border-radius:8px}
+.edition-option,.edition-picker button{border-radius:8px!important}
+.checkout-summary-row{grid-template-columns:145px minmax(0,1fr);padding:10px 0}
+.checkout-summary-row span{font-size:9.5px}
+.registration-code-card{padding-top:22px;padding-bottom:22px}
+.registration-code-card .eyebrow{margin-bottom:7px}
+.final-registration-code{font-size:22px;padding:12px 15px;margin-bottom:0}
+.registration-code-row{align-items:center}
+.checkout-review-card{padding-top:24px;padding-bottom:24px}
+.checkout-edit{min-height:36px;padding:5px 10px;font-size:11px}
+.checkout-payment-card{padding:28px}
+.payment-action-grid-minimal{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.payment-action-card-minimal{min-height:92px;padding:18px 20px;border:1px solid #ddd6cf;border-radius:12px;background:#fff;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;text-align:left;transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}
+.payment-action-card-minimal:hover,.payment-action-card-minimal:focus-visible{border-color:#bfa267;box-shadow:0 8px 20px rgba(38,27,18,.07);transform:translateY(-1px)}
+.payment-action-card-minimal strong{font-size:15px;color:#2c2723}
+.payment-symbol{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:#f4eee5;color:var(--burgundy);font:700 25px/1 Georgia,"Times New Roman",serif}
+.payment-action-card-mp{grid-template-columns:1fr auto}
+.mp-brand-logo{display:block;width:138px;height:auto;max-width:100%}
+.payment-action-arrow{color:#8a7d73;font-size:18px}
+.checkout-amount-row{margin-top:14px;padding:16px 2px 0}
+.checkout-amount-row span{font-size:10px}
+.checkout-amount-row strong{font-size:32px}
+.payment-title-row{display:flex!important;align-items:center!important;gap:13px!important}
+.payment-title-icon{display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px;border-radius:50%;background:#f4eee5;color:var(--burgundy);font:700 25px/1 Georgia,"Times New Roman",serif}
+.transfer-simple-grid{border-radius:10px;overflow:hidden;background:#fff}
+.transfer-simple-grid>div{padding:14px 16px}
+.transfer-simple-grid span{font-size:9px;margin-bottom:4px}
+.transfer-simple-grid strong{font-size:14px}
+.transfer-alias-row strong{font-size:17px}
+.proof-inline-block{margin-top:14px;padding:18px;border:1px solid #eadfda;border-radius:10px;background:#fffafa}
+.proof-inline-block>p{margin:0 0 12px;font-size:13px;color:#3d3530}
+.success-contact-actions{gap:10px}
+.success-contact-actions .button{min-height:44px;padding:11px 18px;font-size:12px}
+.proof-inline-block small,.proof-step-help{font-size:10.5px;color:#8a8078}
+.proof-finish{margin-top:12px;padding-top:12px;border-top:1px solid #eee4df}
+.proof-finish .button{margin-left:auto}
+.checkout-step-back{margin:14px auto 0;font-size:11px}
+.mp-title-row{min-height:48px;align-items:center}
+.mp-header-logo{display:block;width:150px;height:auto}
+.mp-checkout-summary{margin-top:8px;border-radius:10px;overflow:hidden;background:#fff}
+.mp-checkout-summary>div{padding:13px 15px}
+.mp-checkout-summary span{font-size:9px}
+.mp-checkout-summary strong{font-size:14px}
+.mp-hybrid-layout{margin-top:14px}
+.mp-hybrid-action{display:flex;align-items:center;justify-content:center;min-height:92px;padding:14px;border:1px solid #e2dcd5;border-radius:10px;background:#fff}
+.mp-redirect-button{margin-top:0;width:100%;max-width:380px}
+.mp-hybrid-qr{border-radius:10px;padding:16px!important}
+.mp-hybrid-qr strong{font-size:12px!important}
+.payment-loading-card{text-align:center;padding:34px}
+
+@media (max-width:720px){
+  .checkout-intro-inner{display:block}
+  .checkout-progress{margin-top:18px;justify-content:flex-start}
+  .checkout-progress li+li::before{width:22px}
+  .checkout-card{padding:22px 18px}
+  .checkout-form-grid{grid-template-columns:1fr;gap:13px}
+  .checkout-field-full{grid-column:auto}
+  .payment-action-grid-minimal{grid-template-columns:1fr}
+  .payment-action-card-minimal{min-height:78px}
+  .checkout-summary-row{grid-template-columns:1fr;gap:3px}
+  .transfer-simple-grid{grid-template-columns:1fr}
+  .transfer-simple-grid>div{border-right:0!important;border-bottom:1px solid var(--line)!important}
+  .transfer-simple-grid>div:last-child{border-bottom:0!important}
+  .success-contact-actions{display:grid;grid-template-columns:1fr}
+  .success-contact-actions .button{width:100%}
+  .mp-checkout-summary{grid-template-columns:1fr}
+  .mp-checkout-summary>div+div{border-left:0;border-top:1px solid var(--line)}
+}
+
+/* ECIS 132.3 — perceived performance */
+@supports (content-visibility:auto){
+  main > section:not(:first-child), .site-footer, .legal-access-strip--footer { content-visibility:auto; contain-intrinsic-size:1px 700px; }
+}
+.proof-step-help{max-width:620px;margin:.7rem 0 0;color:#716862;font-size:.94rem;line-height:1.45}
+
+/* ECIS 132.4 — proporción visual y performance percibida */
+.checkout-card h2{line-height:1.08}
+.checkout-payment-card .checkout-card-head-simple h2,
+.transfer-checkout .checkout-card-head-simple h2,
+.mp-redirect-checkout .checkout-card-head-simple h2,
+.mp-confirm-checkout .checkout-card-head-simple h2{font-size:clamp(2rem,3.2vw,3rem);margin:0}
+.payment-title-row,.mp-title-row{justify-content:flex-start}
+.payment-title-row .eyebrow,.mp-title-row .eyebrow{margin-bottom:4px}
+.payment-action-grid-minimal{gap:14px}
+.payment-action-card-minimal{min-height:96px;padding:18px 18px 18px 20px;grid-template-columns:auto minmax(0,1fr) auto}
+.payment-action-card-minimal strong{font-size:1rem}
+.payment-action-card-mp{grid-template-columns:minmax(0,1fr) auto}
+.mp-brand-logo{width:152px}
+.checkout-amount-row{display:flex;align-items:end;justify-content:space-between;gap:16px;border-top:1px solid #eee7e0}
+.checkout-amount-row strong{font-size:2rem;line-height:1}
+.transfer-simple-grid{margin-top:2px}
+.transfer-simple-grid strong{font-size:1.08rem}
+.transfer-alias-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px}
+.transfer-alias-row button{justify-self:end}
+.proof-inline-block,.mp-confirm-checkout{background:#fffaf9}
+.proof-inline-block{display:grid;gap:12px;padding:20px 22px}
+.proof-inline-block>p{margin:0;font-size:1rem;line-height:1.25}
+.success-contact-actions{justify-content:flex-start;align-items:center;gap:12px;margin-top:0}
+.success-contact-actions .button{min-width:168px}
+.proof-step-help{max-width:none;margin:0;font-size:.98rem;line-height:1.5;text-align:left;color:#6f655d}
+.proof-finish{justify-content:flex-end}
+.mp-checkout-summary{display:grid;grid-template-columns:1fr 1fr}
+.mp-checkout-summary>div+div{border-left:1px solid var(--line)}
+.course-editions-loading{display:flex;align-items:center;gap:10px;padding:14px 16px;border:1px solid #e3dbd3;border-radius:10px;background:#fcfaf8;color:#6f655d}
+.course-editions-loading::before{content:'';width:16px;height:16px;border-radius:50%;border:2px solid #d7c8bb;border-top-color:#7c1922;animation:ecis-spin .85s linear infinite}
+.course-editions-note{min-height:22px}
+@keyframes ecis-spin{to{transform:rotate(360deg)}}
+@media (max-width:720px){
+  .checkout-card h2{font-size:clamp(1.7rem,6.4vw,2.25rem)}
+  .payment-action-card-minimal{padding:16px 16px 16px 18px}
+  .mp-brand-logo{width:138px}
+  .proof-inline-block{padding:18px}
+  .success-contact-actions{display:grid;grid-template-columns:1fr 1fr}
+  .success-contact-actions .button{min-width:0}
+  .proof-step-help{text-align:left}
+}
+@media (max-width:560px){
+  .success-contact-actions{grid-template-columns:1fr}
+  .checkout-amount-row{display:block}
+  .checkout-amount-row strong{display:block;margin-top:6px}
+}
+
+
+/* ECIS 132.5 — pago compacto y recursos visuales elegidos */
+.checkout-section{padding-top:18px}
+.checkout-narrow{max-width:1040px}
+#payment-flow{display:grid;gap:10px}
+.checkout-card-compact{margin-top:0!important}
+.registration-code-card{padding:18px 22px}
+.registration-code-card .eyebrow{margin-bottom:5px}
+.final-registration-code{font-size:20px;padding:9px 13px}
+.copy-code-button{min-height:36px;padding:7px 12px}
+.checkout-review-card{padding:20px 22px}
+.checkout-review-card .checkout-card-head{margin-bottom:10px}
+.checkout-review-card h2{font-size:clamp(1.8rem,2.7vw,2.45rem)}
+.checkout-summary-row{padding:8px 0;grid-template-columns:120px minmax(0,1fr)}
+.checkout-summary-row span{font-size:9px}
+.checkout-summary-row strong{font-size:.97rem}
+.checkout-payment-card{padding:20px 22px}
+.checkout-payment-card .checkout-card-head{margin-bottom:12px}
+.checkout-payment-card h2{font-size:clamp(1.8rem,2.7vw,2.35rem)}
+.payment-action-grid-minimal{gap:10px}
+.payment-action-card-minimal{min-height:78px;padding:12px 16px}
+.payment-method-icon{display:block;object-fit:contain}
+.payment-method-icon-transfer{width:48px;height:48px}
+.payment-action-card-mp .mp-brand-logo{width:154px;max-height:46px;object-fit:contain}
+.checkout-amount-row{margin-top:10px;padding-top:12px}
+.checkout-amount-row strong{font-size:1.7rem}
+.transfer-checkout,.mp-redirect-checkout,.mp-confirm-checkout{padding:20px 22px}
+.payment-title-row,.mp-title-row{margin-bottom:12px!important}
+.payment-title-icon-image{width:52px;height:52px;object-fit:contain;flex:0 0 52px}
+.mp-header-logo{width:176px;max-height:58px;object-fit:contain}
+.transfer-simple-grid{grid-template-columns:1fr 1fr;margin-top:0}
+.transfer-simple-grid>div{padding:11px 14px}
+.transfer-simple-grid span{font-size:8.5px;margin-bottom:3px}
+.transfer-simple-grid strong{font-size:1rem}
+.transfer-alias-row{grid-template-columns:1fr auto}
+.transfer-alias-row strong{font-size:1.12rem}
+.proof-inline-block{margin-top:10px;padding:15px 16px;gap:10px}
+.proof-inline-block>p{font-size:.95rem}
+.success-contact-actions{gap:9px}
+.success-contact-actions .button{min-width:145px;min-height:40px;padding:9px 14px}
+.proof-step-help{font-size:.9rem;line-height:1.4}
+.checkout-step-back{margin-top:10px}
+.mp-checkout-summary{margin-top:2px}
+.mp-checkout-summary>div{padding:10px 13px}
+.mp-hybrid-layout{gap:12px;margin-top:10px}
+.mp-hybrid-action,.mp-hybrid-qr{padding:14px}
+.mp-hybrid-action{min-height:74px}
+.mp-hybrid-qr img{max-width:170px}
+
+@media (min-width:900px){
+  #payment-flow{grid-template-columns:320px minmax(0,1fr)}
+  .registration-code-card{grid-column:1;grid-row:1}
+  .checkout-review-card{grid-column:2;grid-row:1 / span 2}
+  .checkout-payment-card{grid-column:1;grid-row:2}
+  .transfer-checkout,.mp-redirect-checkout,.mp-confirm-checkout{grid-column:1 / -1}
+  .payment-status-card{grid-column:1 / -1}
+  .registration-code-card{align-self:start}
+  .checkout-payment-card{align-self:start}
+  .checkout-summary-row{grid-template-columns:105px minmax(0,1fr)}
+}
+@media(max-width:899px){
+  #payment-flow{display:block}
+  .checkout-card-compact+.checkout-card-compact{margin-top:10px!important}
+}
+@media(max-width:720px){
+  .checkout-section{padding-top:14px}
+  .checkout-card{padding:18px 16px}
+  .checkout-summary-row{grid-template-columns:1fr;gap:2px}
+  .payment-action-card-minimal{min-height:72px}
+  .payment-method-icon-transfer{width:44px;height:44px}
+  .payment-action-card-mp .mp-brand-logo{width:142px}
+  .transfer-simple-grid{grid-template-columns:1fr}
+  .payment-title-icon-image{width:46px;height:46px;flex-basis:46px}
+}
+
+
+/* =========================================================
+   ECIS 132.6 — checkout ordenado, compacto y rápido
+   ========================================================= */
+.checkout-page .checkout-narrow{max-width:1120px}
+.checkout-page .checkout-section{padding:18px 0 48px}
+.checkout-page .checkout-card{box-shadow:0 5px 18px rgba(30,22,16,.035)}
+
+/* Inscripción */
+#ecis-enrollment-form .checkout-primary{width:auto;min-width:230px;display:block;margin:18px 0 0 auto;padding-left:30px;padding-right:30px}
+.checkout-legal-acceptance{padding:11px 14px;background:#faf7f3;border:1px solid #e5ddd5;border-radius:8px}
+.legal-check{display:flex;align-items:center;gap:9px}
+.legal-check input{flex:0 0 auto}
+
+/* Pago: estructura estable, sin columnas angostas */
+#payment-flow.payment-flow-layout{display:grid;grid-template-columns:300px minmax(0,1fr);grid-template-areas:
+  "code summary"
+  "method method"
+  "detail detail";
+gap:12px;align-items:start}
+#payment-flow .registration-code-card{grid-area:code;margin:0!important;min-width:0}
+#payment-flow .checkout-review-card{grid-area:summary;margin:0!important;min-width:0}
+#payment-flow .checkout-payment-card{grid-area:method;margin:0!important;min-width:0}
+#payment-flow .transfer-checkout,
+#payment-flow .mp-redirect-checkout,
+#payment-flow .mp-confirm-checkout{grid-area:detail;margin:0!important;min-width:0}
+
+.registration-code-card{padding:17px 20px}
+.registration-code-row{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
+.final-registration-code{font-size:1.22rem;letter-spacing:.07em;white-space:nowrap;padding:10px 12px}
+.copy-code-button{white-space:nowrap}
+
+.checkout-review-card{padding:18px 22px}
+.checkout-review-card .checkout-card-head{margin-bottom:8px;align-items:center}
+.checkout-review-card h2{font-size:2rem;margin:0}
+.checkout-summary-row{grid-template-columns:110px minmax(0,1fr);padding:8px 0}
+.checkout-summary-row strong{font-size:.96rem;line-height:1.35}
+
+.checkout-payment-card{padding:18px 22px}
+.checkout-payment-card .checkout-card-head{margin-bottom:12px}
+.checkout-payment-card h2{font-size:1.85rem;margin:0}
+.payment-action-grid-minimal{grid-template-columns:1fr 1fr;gap:12px}
+.payment-action-card-minimal{min-height:84px;padding:13px 17px;display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:14px;align-items:center}
+.payment-action-card-minimal strong{font-size:1rem;white-space:nowrap}
+.payment-action-card-mp{grid-template-columns:minmax(0,1fr) auto;justify-items:start}
+.payment-method-icon-transfer{width:52px;height:52px;object-fit:contain}
+.payment-action-card-mp .mp-brand-logo{width:168px;max-width:100%;height:auto;max-height:52px;object-fit:contain;object-position:left center}
+.payment-action-arrow{justify-self:end}
+.checkout-amount-row{margin-top:12px;padding-top:12px;display:flex;justify-content:space-between;align-items:center}
+.checkout-amount-row strong{font-size:1.7rem}
+
+/* Detalle seleccionado */
+.transfer-checkout,.mp-redirect-checkout,.mp-confirm-checkout{padding:20px 22px}
+.payment-title-row{display:flex!important;align-items:center!important;gap:14px!important;margin-bottom:12px!important}
+.payment-title-row h2{font-size:2rem!important}
+.payment-title-icon-image{width:50px;height:50px;object-fit:contain;flex:0 0 50px}
+.transfer-simple-grid{grid-template-columns:1fr 1fr}
+.transfer-simple-grid>div{padding:11px 14px}
+.transfer-alias-row{grid-template-columns:minmax(0,1fr) auto}
+.proof-inline-block{padding:15px 16px;gap:9px}
+.success-contact-actions{display:flex;justify-content:flex-start;gap:10px;margin:0}
+.success-contact-actions .button{min-width:145px;width:auto}
+.proof-step-help{margin:0;max-width:none;text-align:left;font-size:.9rem;line-height:1.42}
+.checkout-step-back{margin:10px auto 0}
+
+/* Mercado Pago */
+.mp-header-logo{width:190px;max-height:62px;object-fit:contain;object-position:left center}
+.mp-checkout-summary{grid-template-columns:1fr 1fr}
+.mp-hybrid-layout{grid-template-columns:minmax(0,1fr) 220px;gap:14px}
+.mp-hybrid-qr img{max-width:160px}
+
+/* Estado de carga: discreto y estable */
+.payment-loading-card{min-height:112px;display:grid;place-items:center;text-align:center;padding:24px}
+.payment-loading-card h2{font-size:1.35rem;margin:0}
+
+@media (max-width:820px){
+  #payment-flow.payment-flow-layout{grid-template-columns:1fr;grid-template-areas:"code" "summary" "method" "detail"}
+  .payment-action-grid-minimal{grid-template-columns:1fr}
+  .checkout-summary-row{grid-template-columns:1fr;gap:2px}
+  #ecis-enrollment-form .checkout-primary{width:100%;margin-left:0}
+}
+@media (max-width:560px){
+  .registration-code-row{flex-wrap:wrap}
+  .payment-action-card-minimal{grid-template-columns:50px minmax(0,1fr) auto;padding:12px 14px}
+  .payment-action-card-mp{grid-template-columns:minmax(0,1fr) auto}
+  .payment-action-card-mp .mp-brand-logo{width:150px}
+  .transfer-simple-grid{grid-template-columns:1fr}
+  .success-contact-actions{display:grid;grid-template-columns:1fr}
+  .success-contact-actions .button{width:100%;min-width:0}
+  .mp-hybrid-layout{grid-template-columns:1fr}
+}
+
+
+/* ECIS 132.7 — jerarquía estable y checkout coherente */
+.checkout-section{padding-top:22px}
+.checkout-narrow{max-width:1120px}
+.checkout-card{padding:24px 26px}
+.checkout-card-head{align-items:center;margin-bottom:14px}
+.checkout-card-head .eyebrow{margin-bottom:5px}
+.checkout-card h2{font-size:clamp(28px,2.7vw,38px);letter-spacing:-.025em}
+.enrollment-choice-card .selected-experience-summary{margin-top:10px}
+.selected-experience-summary{padding:12px 14px;grid-template-columns:minmax(0,1fr) auto;gap:12px;border:1px solid #e8ddd5;background:#fffaf9}
+.selected-experience-summary div{padding:0;border:0!important}
+.selected-experience-summary span{font-size:9px;letter-spacing:.09em}
+.selected-experience-summary strong{font-size:13px;line-height:1.35}
+.edition-picker{gap:10px;margin-top:12px}
+.edition-option{min-height:82px;padding:13px 15px}
+.checkout-field-help{margin:7px 0 0;font-size:11px}
+.checkout-form-grid{gap:12px 16px}
+.checkout-field input,.checkout-field select{min-height:46px}
+.checkout-legal-acceptance{margin-top:14px}
+.checkout-primary{width:auto;min-width:210px;min-height:48px;margin:18px 0 0 auto;display:flex}
+
+.payment-flow-layout{display:grid;grid-template-columns:minmax(0,.38fr) minmax(0,.62fr);gap:12px;align-items:start}
+.registration-code-card{grid-column:1}
+.checkout-review-card{grid-column:2;grid-row:1 / span 2}
+.checkout-payment-card{grid-column:1}
+.transfer-checkout,.mp-redirect-checkout,.mp-confirm-checkout{grid-column:1 / -1;margin-top:2px!important}
+.checkout-card-compact{padding:20px 22px}
+.registration-code-card .eyebrow{margin-bottom:8px}
+.final-registration-code{font-size:20px;padding:10px 12px}
+.checkout-review-card .checkout-card-head{padding-bottom:10px;border-bottom:1px solid #e7ddd4;margin-bottom:0}
+.checkout-review-card h2{font-size:32px}
+.checkout-summary-row{grid-template-columns:150px minmax(0,1fr);padding:9px 0}
+.checkout-summary-row span{align-self:center}
+.checkout-summary-row strong{line-height:1.35}
+.checkout-payment-card h2{font-size:31px}
+.payment-action-grid-minimal{grid-template-columns:1fr 1fr;gap:10px}
+.payment-action-card-minimal{min-height:82px;padding:13px 15px;gap:10px}
+.payment-method-icon-transfer{width:42px;height:42px;object-fit:contain}
+.payment-action-card-mp .mp-brand-logo{width:118px;max-height:42px;object-fit:contain;object-position:left center}
+.checkout-amount-row{padding-top:12px;margin-top:10px}
+.checkout-amount-row strong{font-size:25px}
+
+.transfer-checkout .payment-title-row{padding-bottom:12px;border-bottom:1px solid #eadfd7;margin-bottom:12px}
+.payment-title-icon-image{width:46px;height:46px;object-fit:contain;flex:0 0 46px}
+.transfer-checkout h2{font-size:34px}
+.transfer-simple-grid{grid-template-columns:1fr 1fr}
+.transfer-simple-grid>div{min-height:72px;display:flex;flex-direction:column;justify-content:center}
+.transfer-alias-row{display:grid!important;grid-template-columns:1fr auto;grid-template-rows:auto auto}
+.transfer-alias-row span{grid-column:1 / -1}
+.transfer-alias-row strong{align-self:center}
+.transfer-alias-row button{grid-column:2;grid-row:2;align-self:center}
+.proof-inline-block{grid-template-columns:auto 1fr;column-gap:18px;row-gap:8px;align-items:center}
+.proof-inline-block>p:first-child{grid-column:1 / -1}
+.proof-inline-block .success-contact-actions{grid-column:1;grid-row:2;white-space:nowrap}
+.proof-inline-block .proof-step-help{grid-column:2;grid-row:2;margin:0}
+.proof-inline-block .proof-finish{grid-column:1 / -1}
+.checkout-step-back{display:block;margin:12px auto 0}
+
+@media(max-width:880px){
+  .payment-flow-layout{grid-template-columns:1fr}
+  .registration-code-card,.checkout-review-card,.checkout-payment-card,.transfer-checkout,.mp-redirect-checkout,.mp-confirm-checkout{grid-column:1;grid-row:auto}
+  .checkout-review-card{order:2}.checkout-payment-card{order:3}
+  .proof-inline-block{grid-template-columns:1fr}
+  .proof-inline-block>p:first-child,.proof-inline-block .success-contact-actions,.proof-inline-block .proof-step-help,.proof-inline-block .proof-finish{grid-column:1;grid-row:auto}
+}
+@media(max-width:620px){
+  .checkout-card{padding:20px 16px}
+  .selected-experience-summary{grid-template-columns:1fr}
+  .checkout-primary{width:100%;margin-left:0}
+  .payment-action-grid-minimal{grid-template-columns:1fr}
+  .checkout-summary-row{grid-template-columns:1fr;gap:2px}
+  .transfer-simple-grid{grid-template-columns:1fr}
+}
+
+
+/* =========================================================
+   ECIS 132.8 — Producción: consistencia, responsive y fluidez
+   ========================================================= */
+html{overflow-x:hidden;text-size-adjust:100%;-webkit-text-size-adjust:100%}
+body{overflow-x:hidden}
+.container{width:min(100% - 40px,1180px)}
+.button,button,input,select,textarea{font:inherit}
+.button,button{min-height:44px}
+button,.button,a{touch-action:manipulation}
+img{max-width:100%;height:auto}
+
+/* Ritmo visual común */
+.checkout-card,.contact-form-wrap,.experience-card,.source-reference-card{border-color:#e5ded7}
+.checkout-card{box-shadow:0 6px 22px rgba(35,25,18,.045)}
+.checkout-card h2,.form-title{letter-spacing:-.025em}
+.eyebrow{letter-spacing:.25em}
+.checkout-field label,.contact-form label{font-weight:650}
+.checkout-field input,.checkout-field select,.contact-form input,.contact-form textarea,.contact-form select{border-color:#ddd5ce;box-shadow:none}
+.checkout-field input:focus,.checkout-field select:focus,.contact-form input:focus,.contact-form textarea:focus,.contact-form select:focus{outline:2px solid rgba(116,16,24,.16);outline-offset:1px;border-color:#9c5960}
+
+/* Inscripción: lectura vertical clara */
+.enrollment-choice-card,.enrollment-details-card{padding-top:26px;padding-bottom:26px}
+.selected-experience-summary{margin-top:14px}
+.edition-picker{margin-top:14px}
+.checkout-legal-acceptance{margin-top:16px}
+.enrollment-actions{display:flex;justify-content:flex-end}
+#enrollment-submit{min-width:230px}
+
+/* Pago: jerarquía consistente */
+.payment-overview-grid{align-items:start}
+.registration-code-card,.checkout-review-card,.checkout-payment-card{background:#fff}
+.checkout-review-card .checkout-card-head{align-items:center}
+.checkout-summary-row{min-height:42px}
+.payment-action-card-minimal{overflow:hidden;word-break:normal;overflow-wrap:normal}
+.payment-action-card-minimal strong{white-space:normal;line-height:1.25}
+.payment-action-card-minimal img{object-fit:contain}
+.proof-inline-block{background:#fffaf9}
+.proof-step-help{max-width:760px}
+
+/* Un solo estado de carga visual */
+.course-editions-loading{display:flex;align-items:center;gap:10px;padding:12px 14px;margin:8px 0 0;border:1px solid #e4dcd4;border-radius:9px;background:#fcfaf8;color:#6f655e;font-size:12px}
+.course-editions-loading::before{content:'';width:14px;height:14px;flex:0 0 14px;border:2px solid #d8cec4;border-top-color:var(--burgundy);border-radius:50%;animation:ecis1328spin .8s linear infinite}
+@keyframes ecis1328spin{to{transform:rotate(360deg)}}
+
+/* Formularios: menos ruido */
+.contact-form{gap:10px}
+.contact-form label{margin-top:4px}
+.contact-form .button{margin-top:6px}
+.form-status{border-radius:9px}
+
+/* Dispositivos modestos: sin efectos que no aportan */
+.ecis-low-power *,
+.ecis-low-power *::before,
+.ecis-low-power *::after{scroll-behavior:auto!important}
+.ecis-low-power .lux-reveal,.ecis-low-power .reveal{opacity:1!important;transform:none!important;transition:none!important}
+.ecis-low-power .ecis-card-glow{display:none!important}
+.ecis-low-power .experience-card,.ecis-low-power .checkout-card,.ecis-low-power .contact-form-wrap{transition:none!important}
+
+@media (min-width:1200px){
+  .checkout-narrow{max-width:1080px}
+}
+@media (max-width:900px){
+  .container{width:min(100% - 32px,1180px)}
+  .checkout-intro{padding-top:26px}
+  .checkout-section{padding-top:22px}
+  .payment-overview-grid{grid-template-columns:1fr!important}
+  #enrollment-submit{min-width:200px}
+}
+@media (max-width:600px){
+  .container{width:min(100% - 24px,1180px)}
+  .site-header .container{width:min(100% - 24px,1180px)}
+  .checkout-intro{padding:22px 0 16px}
+  .checkout-section{padding:18px 0 44px}
+  .checkout-card{padding:20px 16px;border-radius:10px}
+  .checkout-card+.checkout-card{margin-top:12px}
+  .checkout-card h2{font-size:clamp(1.65rem,8vw,2.1rem)}
+  .checkout-field input,.checkout-field select,.contact-form input,.contact-form textarea,.contact-form select{font-size:16px;min-height:48px}
+  .checkout-progress strong{display:none}
+  .checkout-progress li+li::before{width:18px}
+  .enrollment-actions{display:block}
+  #enrollment-submit{width:100%;min-width:0}
+  .payment-action-grid-minimal{gap:10px}
+  .payment-action-card-minimal{min-height:76px;padding:14px}
+  .proof-step-help{font-size:.9rem}
+  .legal-access-strip__inner{gap:10px}
+}
+@media (max-width:390px){
+  .container{width:min(100% - 18px,1180px)}
+  .checkout-card{padding:18px 14px}
+  .button{padding-left:14px;padding-right:14px}
+  .brand-name{display:none}
+}
