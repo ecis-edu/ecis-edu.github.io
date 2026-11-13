@@ -3193,3 +3193,557 @@ img{max-width:100%;height:auto}
   .button{padding-left:14px;padding-right:14px}
   .brand-name{display:none}
 }
+
+
+/* ECIS 132.9 — Ajustes visuales de pago */
+.checkout-payment-card h2{max-width:10ch}
+.payment-action-grid-minimal{align-items:stretch}
+.payment-action-card-minimal{
+  min-height:88px;
+  grid-template-columns:70px minmax(0,1fr) auto;
+  gap:16px;
+}
+.payment-method-icon-transfer{
+  width:64px!important;
+  height:64px!important;
+}
+.payment-action-card-minimal strong{
+  font-size:1.08rem;
+}
+.payment-action-card-mp .mp-brand-logo{
+  width:178px;
+  max-height:58px;
+}
+
+/* Mercado Pago: composición más compacta */
+.mp-checkout-summary{
+  margin-top:8px;
+}
+.mp-hybrid-layout{
+  grid-template-columns:minmax(0,1fr) 240px;
+  gap:18px;
+  align-items:start!important;
+}
+.mp-hybrid-action,
+.mp-hybrid-qr{
+  padding:18px 20px!important;
+  border-radius:12px;
+}
+.mp-hybrid-action{
+  min-height:auto!important;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:flex-start;
+  gap:12px;
+}
+.mp-hybrid-action::before{
+  content:'Elegí una de las dos opciones para completar el pago.';
+  display:block;
+  color:#655b55;
+  font-size:.96rem;
+  line-height:1.45;
+}
+.mp-hybrid-action .mp-redirect-button{
+  width:min(100%, 480px);
+  margin-top:0!important;
+}
+.mp-hybrid-qr img{
+  max-width:176px!important;
+}
+.mp-hybrid-qr strong{
+  margin-top:2px;
+}
+.mp-qr-continue{
+  width:100%;
+}
+
+/* Transferencia: alias y botón Copiar mejor resueltos */
+.transfer-simple-grid{
+  overflow:hidden;
+}
+.transfer-alias-row{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-rows:auto auto;
+  align-items:center;
+  gap:8px 14px;
+  padding-right:16px!important;
+}
+.transfer-alias-row span{
+  grid-column:1 / -1;
+}
+.transfer-alias-row strong{
+  grid-column:1;
+  grid-row:2;
+  align-self:center;
+}
+.transfer-alias-row button{
+  position:static!important;
+  right:auto!important;
+  top:auto!important;
+  transform:none!important;
+  grid-column:2;
+  grid-row:2;
+  justify-self:end;
+  align-self:center;
+  margin:0;
+  white-space:nowrap;
+}
+
+@media (max-width:900px){
+  .payment-action-card-minimal{
+    grid-template-columns:60px minmax(0,1fr) auto;
+    gap:14px;
+  }
+  .payment-method-icon-transfer{
+    width:58px!important;
+    height:58px!important;
+  }
+  .payment-action-card-mp .mp-brand-logo{
+    width:162px;
+  }
+  .mp-hybrid-layout{
+    grid-template-columns:1fr 210px;
+    gap:14px;
+  }
+}
+@media (max-width:760px){
+  .checkout-payment-card h2{max-width:none}
+  .payment-action-card-minimal{
+    min-height:82px;
+    grid-template-columns:54px minmax(0,1fr) auto;
+    gap:12px;
+  }
+  .payment-method-icon-transfer{
+    width:52px!important;
+    height:52px!important;
+  }
+  .payment-action-card-mp .mp-brand-logo{
+    width:148px;
+    max-height:50px;
+  }
+  .mp-hybrid-layout{
+    grid-template-columns:1fr;
+  }
+  .mp-hybrid-action::before{
+    font-size:.92rem;
+  }
+  .mp-hybrid-action .mp-redirect-button{
+    width:100%;
+  }
+  .transfer-alias-row{
+    grid-template-columns:1fr;
+    grid-template-rows:auto auto auto;
+    gap:8px;
+  }
+  .transfer-alias-row strong,
+  .transfer-alias-row button{
+    grid-column:1;
+    justify-self:start;
+  }
+}
+
+
+/* ECIS 133.0 — refinado visual de pago */
+#payment-flow.payment-flow-layout{
+  grid-template-columns:1fr;
+  grid-template-areas:
+    "code"
+    "summary"
+    "method"
+    "detail";
+  gap:14px;
+}
+#payment-flow .registration-code-card,
+#payment-flow .checkout-review-card,
+#payment-flow .checkout-payment-card,
+#payment-flow .transfer-checkout,
+#payment-flow .mp-redirect-checkout,
+#payment-flow .mp-confirm-checkout{
+  max-width:none;
+}
+.registration-code-card{
+  padding:16px 22px;
+}
+.registration-code-card .eyebrow{
+  margin-bottom:8px;
+}
+.registration-code-row{
+  gap:12px;
+}
+.final-registration-code{
+  font-size:1.36rem;
+  padding:11px 16px;
+}
+.copy-code-button{
+  min-height:48px;
+  padding:0 18px;
+}
+.checkout-review-card{
+  padding:20px 28px;
+}
+.checkout-review-card h2{
+  font-size:clamp(2rem,3vw,2.45rem);
+}
+.checkout-summary-row{
+  grid-template-columns:150px minmax(0,1fr);
+  gap:18px;
+  min-height:46px;
+}
+.checkout-summary-row strong{
+  font-size:1rem;
+}
+
+/* Selector de medios: iconos/logos más grandes y CTA auxiliar */
+.checkout-payment-card{
+  padding:22px 28px;
+}
+.checkout-payment-card .checkout-card-head{
+  margin-bottom:16px;
+}
+.checkout-payment-card h2{
+  font-size:clamp(2rem,3vw,2.6rem);
+}
+.payment-action-grid-minimal{
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+.payment-action-card-minimal{
+  min-height:96px;
+  padding:16px 20px;
+  grid-template-columns:86px minmax(0,1fr) auto;
+  gap:18px;
+  border-radius:14px;
+}
+.payment-action-card-minimal strong{
+  font-size:1.14rem;
+  font-weight:700;
+}
+.payment-method-icon-transfer{
+  width:74px!important;
+  height:74px!important;
+}
+.payment-action-card-mp{
+  grid-template-columns:minmax(0,1fr) auto;
+}
+.payment-action-card-mp .mp-brand-logo{
+  width:220px;
+  max-height:72px;
+}
+.payment-action-arrow{
+  font-size:22px;
+  color:var(--burgundy);
+}
+.checkout-amount-row{
+  margin-top:14px;
+  padding-top:14px;
+}
+.checkout-amount-row strong{
+  font-size:1.9rem;
+}
+.payment-support-note{
+  margin-top:16px;
+  padding:14px 16px;
+  border:1px solid rgba(116,16,24,.12);
+  border-radius:12px;
+  background:#fcf8f7;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
+.payment-support-note p{
+  margin:0;
+  color:#5e544d;
+  font-size:.96rem;
+  line-height:1.45;
+}
+.payment-support-button{
+  flex:0 0 auto;
+  min-height:46px;
+  padding:0 18px;
+}
+.button-primary-soft{
+  background:var(--burgundy);
+  color:#fff;
+  border-color:var(--burgundy);
+  box-shadow:0 12px 24px rgba(116,16,24,.12);
+}
+.button-primary-soft:hover,
+.button-primary-soft:focus-visible{
+  background:#5d0d16;
+  border-color:#5d0d16;
+  color:#fff;
+}
+
+/* Botones importantes con más presencia */
+#payment-flow .button-primary,
+#payment-flow .checkout-primary{
+  min-height:50px;
+  padding:0 22px;
+  font-size:1rem;
+  font-weight:700;
+  box-shadow:0 14px 28px rgba(116,16,24,.16);
+}
+#payment-flow .button-primary:hover,
+#payment-flow .button-primary:focus-visible,
+#payment-flow .checkout-primary:hover,
+#payment-flow .checkout-primary:focus-visible{
+  transform:translateY(-1px);
+}
+#payment-flow .registration-secondary{
+  min-height:48px;
+  padding:0 18px;
+  font-weight:600;
+}
+
+/* Transferencia: info más compacta y apilada */
+.transfer-checkout,
+.mp-redirect-checkout,
+.mp-confirm-checkout{
+  padding:22px 28px;
+}
+.payment-title-row{
+  gap:16px!important;
+  margin-bottom:14px!important;
+}
+.payment-title-icon-image{
+  width:62px;
+  height:62px;
+  flex:0 0 62px;
+}
+.payment-title-row h2{
+  font-size:clamp(2rem,3vw,2.45rem)!important;
+}
+.transfer-simple-grid{
+  grid-template-columns:1fr;
+  margin-top:4px;
+}
+.transfer-simple-grid>div{
+  min-height:unset;
+  padding:14px 16px;
+}
+.transfer-simple-grid strong{
+  font-size:1.12rem;
+}
+.transfer-alias-row{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-rows:auto auto;
+  gap:8px 14px;
+  align-items:center;
+}
+.transfer-alias-row button{
+  min-height:44px;
+  padding:0 16px;
+  border-radius:999px;
+  align-self:center;
+}
+.proof-inline-block{
+  margin-top:14px;
+  padding:18px;
+  gap:12px;
+  border-radius:14px;
+}
+.proof-inline-block>p:first-child{
+  margin:0;
+  font-size:1.05rem;
+}
+.success-contact-actions{
+  gap:12px;
+}
+.success-contact-actions .button{
+  min-width:160px;
+}
+.proof-step-help{
+  font-size:.98rem;
+  line-height:1.5;
+}
+
+/* Mercado Pago: menos aire y contenido más ordenado */
+.mp-title-row{
+  margin-bottom:12px!important;
+}
+.mp-header-logo{
+  width:250px;
+  max-height:78px;
+}
+.mp-checkout-summary{
+  grid-template-columns:1fr;
+  margin-top:8px;
+}
+.mp-checkout-summary>div+div{
+  border-left:0!important;
+  border-top:1px solid var(--line);
+}
+.mp-checkout-summary>div{
+  padding:14px 16px;
+}
+.mp-checkout-summary strong{
+  font-size:1.18rem;
+}
+.mp-hybrid-layout{
+  grid-template-columns:1fr;
+  gap:14px;
+  margin-top:14px;
+}
+.mp-hybrid-action,
+.mp-hybrid-qr{
+  padding:18px 20px!important;
+  border-radius:14px;
+}
+.mp-hybrid-action{
+  min-height:unset!important;
+  gap:14px;
+}
+.mp-hybrid-action::before{
+  font-size:1rem;
+}
+.mp-hybrid-action .mp-redirect-button{
+  width:min(100%, 460px);
+}
+.mp-hybrid-qr{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+}
+.mp-hybrid-qr img{
+  max-width:190px!important;
+}
+.mp-hybrid-qr strong{
+  font-size:1rem!important;
+}
+.mp-qr-continue{
+  width:min(100%, 320px);
+}
+.mp-confirm-checkout .checkout-card-head{
+  margin-bottom:12px;
+}
+
+@media (max-width:900px){
+  .payment-action-card-minimal{
+    grid-template-columns:74px minmax(0,1fr) auto;
+    gap:16px;
+  }
+  .payment-method-icon-transfer{
+    width:66px!important;
+    height:66px!important;
+  }
+  .payment-action-card-mp .mp-brand-logo{
+    width:198px;
+    max-height:66px;
+  }
+  .payment-support-note{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+}
+@media (max-width:760px){
+  .registration-code-card,
+  .checkout-review-card,
+  .checkout-payment-card,
+  .transfer-checkout,
+  .mp-redirect-checkout,
+  .mp-confirm-checkout{
+    padding:18px 16px;
+  }
+  .checkout-summary-row{
+    grid-template-columns:1fr;
+    gap:3px;
+  }
+  .payment-action-grid-minimal{
+    grid-template-columns:1fr;
+  }
+  .payment-action-card-minimal{
+    min-height:88px;
+    grid-template-columns:68px minmax(0,1fr) auto;
+    padding:15px 16px;
+    gap:14px;
+  }
+  .payment-method-icon-transfer{
+    width:60px!important;
+    height:60px!important;
+  }
+  .payment-action-card-mp .mp-brand-logo{
+    width:178px;
+    max-height:58px;
+  }
+  .payment-support-button,
+  .mp-hybrid-action .mp-redirect-button,
+  .mp-qr-continue,
+  .success-contact-actions .button{
+    width:100%;
+  }
+  .payment-title-icon-image{
+    width:56px;
+    height:56px;
+    flex-basis:56px;
+  }
+  .mp-header-logo{
+    width:220px;
+    max-height:68px;
+  }
+  .transfer-alias-row{
+    grid-template-columns:1fr;
+    grid-template-rows:auto auto auto;
+  }
+  .transfer-alias-row strong,
+  .transfer-alias-row button{
+    grid-column:1;
+    justify-self:start;
+  }
+}
+@media (max-width:480px){
+  .registration-code-row{flex-wrap:wrap}
+  .final-registration-code{font-size:1.18rem}
+  .payment-action-card-minimal{
+    grid-template-columns:60px minmax(0,1fr) auto;
+  }
+  .payment-method-icon-transfer{
+    width:54px!important;
+    height:54px!important;
+  }
+  .payment-action-card-mp .mp-brand-logo{
+    width:160px;
+    max-height:52px;
+  }
+}
+
+
+/* ECIS 133.1 — igualar presencia visual del icono de transferencia */
+.payment-action-card-minimal{
+  grid-template-columns:112px minmax(0,1fr) auto;
+}
+.payment-method-icon-transfer{
+  width:104px!important;
+  height:104px!important;
+}
+@media (max-width:900px){
+  .payment-action-card-minimal{
+    grid-template-columns:102px minmax(0,1fr) auto;
+  }
+  .payment-method-icon-transfer{
+    width:94px!important;
+    height:94px!important;
+  }
+}
+@media (max-width:760px){
+  .payment-action-card-minimal{
+    grid-template-columns:92px minmax(0,1fr) auto;
+  }
+  .payment-method-icon-transfer{
+    width:84px!important;
+    height:84px!important;
+  }
+}
+@media (max-width:480px){
+  .payment-action-card-minimal{
+    grid-template-columns:84px minmax(0,1fr) auto;
+  }
+  .payment-method-icon-transfer{
+    width:76px!important;
+    height:76px!important;
+  }
+}
