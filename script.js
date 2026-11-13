@@ -943,6 +943,55 @@ function renderQuickEnrollmentPreview(params) {
   return preview;
 }
 
+async 
+
+function verificarRestriccionJsonp(persona, timeoutMs = 5000) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `ecisRestriccion_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const script = document.createElement('script');
+    let settled = false;
+    const cleanup = () => {
+      try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+      script.remove();
+    };
+    const timeout = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('No pudimos validar la inscripción. Intentá nuevamente.'));
+    }, timeoutMs);
+    window[callbackName] = data => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      cleanup();
+      if (!data || data.resultado !== 'ok' || data.version !== '133.3') {
+        reject(new Error('La validación de inscripción necesita actualizarse. Comunicate con ECIS.'));
+        return;
+      }
+      resolve(Boolean(data.bloqueado));
+    };
+    script.onerror = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      cleanup();
+      reject(new Error('No pudimos validar la inscripción. Intentá nuevamente.'));
+    };
+    const params = new URLSearchParams({
+      accion: 'verificar_restriccion',
+      documento: persona?.documento || persona?.dni || '',
+      email: persona?.email || '',
+      telefono: persona?.telefono || '',
+      callback: callbackName,
+      _: String(Date.now())
+    });
+    script.src = `${ECIS_ENDPOINT}?${params.toString()}`;
+    script.async = true;
+    document.head.appendChild(script);
+  });
+}
+
 async function initializeEnrollmentPage() {
   if (!enrollmentForm || !experienceSelect) return;
   restoreEnrollmentDraft();
@@ -1074,6 +1123,19 @@ async function initializeEnrollmentPage() {
       horario: edition.horario,
       modalidad: edition.modalidad || 'Virtual'
     });
+
+    try {
+      const bloqueado = await verificarRestriccionJsonp(data, 5000);
+      if (bloqueado) {
+        setError(enrollmentError, 'No es posible completar esta inscripción. Para realizar una consulta, comunicate con ECIS.');
+        if (enrollmentSubmit) { enrollmentSubmit.disabled = false; enrollmentSubmit.textContent = 'Continuar →'; }
+        return;
+      }
+    } catch (error) {
+      setError(enrollmentError, error?.message || 'No pudimos validar la inscripción. Intentá nuevamente.');
+      if (enrollmentSubmit) { enrollmentSubmit.disabled = false; enrollmentSubmit.textContent = 'Continuar →'; }
+      return;
+    }
 
     const existingDraft = normalizeEnrollmentData(readJsonStorage(ECIS_STORAGE_KEY));
     const sameExistingRegistration = Boolean(
