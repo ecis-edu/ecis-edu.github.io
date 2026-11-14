@@ -5,7 +5,45 @@
 <meta content="ECIS Masterclass: propuestas de formación para profundizar temas de Control de Infecciones y Seguridad del Paciente." name="description"/><meta content="#0d0d0d" name="theme-color"/><meta content="index,follow,max-image-preview:large" name="robots"/><meta content="ECIS" name="author"/>
 <meta content="es_AR" property="og:locale"/><meta content="website" property="og:type"/><meta content="ECIS" property="og:site_name"/><meta content="ECIS | Masterclass" property="og:title"/><meta content="Masterclass ECIS: experiencias de formación sobre Control de Infecciones y Seguridad del Paciente, con enfoque aplicado a la práctica." property="og:description"/>
 <meta content="https://ecis-edu.github.io/assets/images/ecis-web-preview.png" property="og:image"/><meta content="1200" property="og:image:width"/><meta content="630" property="og:image:height"/><meta content="ECIS · Educación en Control de Infecciones y Seguridad del Paciente" property="og:image:alt"/><meta content="summary_large_image" name="twitter:card"/><meta content="https://ecis-edu.github.io/assets/images/ecis-web-preview.png" name="twitter:image"/>
-<link href="assets/images/favicon.svg" rel="icon" type="image/svg+xml"/><title>ECIS | Masterclass</title><link crossorigin="anonymous" href="https://script.google.com" rel="preconnect"/><link crossorigin="anonymous" href="https://script.googleusercontent.com" rel="preconnect"/><link href="styles.css?v=20261114-1334" rel="stylesheet"/></head><body>
+<link href="assets/images/favicon.svg" rel="icon" type="image/svg+xml"/><title>ECIS | Masterclass</title><link crossorigin="anonymous" href="https://script.google.com" rel="preconnect"/><link crossorigin="anonymous" href="https://script.googleusercontent.com" rel="preconnect"/><link href="styles.css?v=20261114-1335" rel="stylesheet"/><script>
+window.__ecisExperiencesPrefetchPromise = new Promise(function(resolve,reject){
+  try {
+    var existing = null;
+    try {
+      existing = JSON.parse(localStorage.getItem('ecis_experiences_cache_v8') || 'null');
+      if (existing && Array.isArray(existing.items) && existing.items.length && Date.now() - Number(existing.savedAt || 0) < 21600000) {
+        window.__ecisExperiencesPrefetch = existing.items;
+      }
+    } catch(e) {}
+    var callbackName = 'ecisPrefetch_' + Date.now();
+    var script = document.createElement('script');
+    var settled = false;
+    var finish = function(items){
+      if (settled) return;
+      settled = true;
+      try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+      script.remove();
+      if (Array.isArray(items) && items.length) {
+        window.__ecisExperiencesPrefetch = items;
+        try { localStorage.setItem('ecis_experiences_cache_v8', JSON.stringify({ savedAt: Date.now(), items: items })); } catch(e) {}
+        resolve(items);
+      } else {
+        resolve(null);
+      }
+    };
+    window[callbackName] = function(data){
+      if (!data || data.resultado !== 'ok' || !Array.isArray(data.experiencias)) { finish(null); return; }
+      finish(data.experiencias);
+    };
+    script.onerror = function(){ finish(null); };
+    script.async = true;
+    script.src = 'https://script.google.com/macros/s/AKfycbwm5voUlP5k02F-bNalKUkUknY2SvKe6PVpgOivqn8z0zKPKHNzGmII0UNxJLfljTkp/exec?accion=experiencias&callback=' + encodeURIComponent(callbackName) + '&_=' + Date.now();
+    document.head.appendChild(script);
+    setTimeout(function(){ finish(null); }, 5000);
+  } catch (error) { reject(error); }
+});
+</script>
+</head><body>
 <a class="skip-link" href="#contenido">Saltar al contenido</a><header class="site-header">
 <div class="container nav-wrap">
 <a aria-label="ECIS, inicio" class="brand" href="index.html">
@@ -38,7 +76,7 @@
 <div class="masterclass-meta-item"><span>Fechas</span><strong id="hm001-date-count">Cargando…</strong></div>
 <div class="masterclass-meta-item"><span>Valor</span><strong id="hm001-price">Cargando…</strong></div>
 </div>
-<div aria-live="polite" class="course-editions" data-experience-id="HM001" id="hm001-editions"><p class="course-editions-loading">Cargando disponibilidad…</p></div>
+<div aria-live="polite" class="course-editions" data-experience-id="HM001" id="hm001-editions"><p class="course-editions-loading">Cargando próximas fechas…</p></div>
 <p class="course-editions-note" id="hm001-editions-note">Elegí la fecha que mejor se adapte a vos. La inscripción queda vinculada a esa edición.</p>
 </div></div>
 <div class="masterclass-detail-grid">
@@ -66,4 +104,4 @@
 <div class="footer-identity"><span>© <span id="year"></span> ECIS. Todos los derechos reservados.</span><span class="footer-motto">De la evidencia a la práctica.</span></div>
 <nav aria-label="Información legal" class="footer-links"><a href="privacidad.html">Privacidad</a><a href="condiciones.html">Condiciones de inscripción</a><a href="https://ecis-edu.github.io/ecis-verificador/" rel="noopener noreferrer" target="_blank">Verificar certificado</a></nav>
 </div></div>
-</footer><script defer="" src="consent.js?v=20261114-1334"></script><script defer="" src="script.js?v=20261114-1334"></script></body></html>
+</footer><script defer="" src="consent.js?v=20261114-1335"></script><script defer="" src="script.js?v=20261114-1335"></script></body></html>
