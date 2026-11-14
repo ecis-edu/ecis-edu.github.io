@@ -1,5 +1,5 @@
 // =========================================================
-// ECIS 132.0 — flujo rápido y robusto
+// ECIS 133.4 — flujo rápido y robusto
 // Base visual/textual pre-106 + movimiento sutil, acciones claras y tolerancia de red adaptativa
 // =========================================================
 
@@ -8,7 +8,7 @@ const ECIS_STORAGE_KEY = 'ecis_enrollment_draft';
 const ECIS_RESULT_KEY = 'ecis_enrollment_result';
 const ECIS_REGISTRATION_ATTEMPT_PREFIX = 'ecis_registration_attempt_';
 const ECIS_PAYMENT_STAGE_KEY = 'ecis_payment_stage';
-const ECIS_EXPERIENCES_CACHE_KEY = 'ecis_experiences_cache_v8';
+const ECIS_EXPERIENCES_CACHE_KEY = 'ecis_experiences_cache_v9';
 const ECIS_EXPERIENCES_CACHE_TTL = 5 * 60 * 1000;
 const ECIS_WHATSAPP = '5491173445804';
 const ECIS_EMAIL = 'ecis.ar.edu@gmail.com';
@@ -503,12 +503,13 @@ let loadedExperiences = [];
 let selectedEditionId = '';
 let registrationPostPromise = null;
 let experiencesWarmupStarted = false;
+let experiencesRequestPromise = null;
 
 function warmExperiencesCache(force = false) {
   if (experiencesWarmupStarted && !force) return;
   experiencesWarmupStarted = true;
   const start = () => {
-    loadExperiencesJsonp(Math.min(getNetworkProfile().requestTimeout, 6000))
+    loadExperiencesJsonp(12000)
       .then(items => {
         if (Array.isArray(items) && items.length) {
           loadedExperiences = items;
@@ -549,11 +550,12 @@ async function getPrefetchedExperiences(timeoutMs = 2200) {
   return null;
 }
 
-async function loadExperiencesJsonp(timeoutMs = getNetworkProfile().requestTimeout) {
-  const prefetched = await getPrefetchedExperiences(Math.min(timeoutMs, 2200));
+async function loadExperiencesJsonp(timeoutMs = Math.max(getNetworkProfile().requestTimeout, 10000)) {
+  const prefetched = consumePrefetchedExperiences();
   if (prefetched?.length) return prefetched;
+  if (experiencesRequestPromise) return experiencesRequestPromise;
 
-  return new Promise((resolve, reject) => {
+  experiencesRequestPromise = new Promise((resolve, reject) => {
     const callbackName = `ecisExperiencias_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const script = document.createElement('script');
     let settled = false;
@@ -561,40 +563,37 @@ async function loadExperiencesJsonp(timeoutMs = getNetworkProfile().requestTimeo
     const cleanup = () => {
       try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
       script.remove();
+      experiencesRequestPromise = null;
     };
-
-    const timeout = window.setTimeout(() => {
+    const finishError = message => {
       if (settled) return;
       settled = true;
+      window.clearTimeout(timer);
       cleanup();
-      reject(new Error('La respuesta sigue en curso.'));
-    }, timeoutMs);
+      reject(new Error(message || 'No pudimos actualizar la disponibilidad.'));
+    };
+    const timer = window.setTimeout(() => finishError('La consulta de disponibilidad demoró demasiado.'), timeoutMs);
 
     window[callbackName] = data => {
       if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      cleanup();
       if (!data || data.resultado !== 'ok' || !Array.isArray(data.experiencias)) {
-        reject(new Error(data?.mensaje || 'No pudimos actualizar la disponibilidad.'));
+        finishError(data?.mensaje || 'No pudimos actualizar la disponibilidad.');
         return;
       }
-      resolve(data.experiencias);
-    };
-
-    script.onerror = () => {
-      if (settled) return;
       settled = true;
-      window.clearTimeout(timeout);
+      window.clearTimeout(timer);
+      const items = data.experiencias;
       cleanup();
-      reject(new Error('No pudimos actualizar la disponibilidad.'));
+      resolve(items);
     };
+    script.onerror = () => finishError('No pudimos conectar con la disponibilidad de ECIS.');
 
     const separator = ECIS_ENDPOINT.includes('?') ? '&' : '?';
     script.src = `${ECIS_ENDPOINT}${separator}accion=experiencias&callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
     script.async = true;
     document.head.appendChild(script);
   });
+  return experiencesRequestPromise;
 }
 
 function findExperience(id) {
@@ -759,19 +758,19 @@ async function initializeMasterclassDates() {
   if (cached.length) {
     loadedExperiences = cached;
     renderMasterclassEditions();
-    if (masterclassEditionsNote) masterclassEditionsNote.textContent = 'Disponibilidad actualizándose…';
+    if (masterclassEditionsNote) masterclassEditionsNote.textContent = 'Actualizando disponibilidad…';
   }
   try {
-    await waitForConnection();
-    const fresh = await loadExperiencesJsonp();
+    const fresh = await loadExperiencesJsonp(12000);
     loadedExperiences = fresh;
     writeExperiencesCache(fresh);
     renderMasterclassEditions();
-  } catch (_) {
+  } catch (error) {
     if (!loadedExperiences.length) {
-      masterclassEditions.innerHTML = '<div class="course-editions-empty"><strong>No pudimos actualizar las fechas.</strong><span>Verificá tu conexión y recargá la página.</span></div>';
-      if (masterclassDateCount) masterclassDateCount.textContent = 'Disponibilidad no disponible';
-      if (masterclassPrice) masterclassPrice.textContent = 'Consultar';
+      masterclassEditions.innerHTML = '<div class="course-editions-empty"><strong>No pudimos cargar las fechas.</strong><span>Recargá la página en unos segundos.</span></div>';
+      if (masterclassDateCount) masterclassDateCount.textContent = 'No disponible';
+      if (masterclassPrice) masterclassPrice.textContent = '—';
+      if (masterclassEditionsNote) masterclassEditionsNote.textContent = 'La información de inscripción no pudo actualizarse.';
     } else if (masterclassEditionsNote) {
       masterclassEditionsNote.textContent = 'Mostramos la última disponibilidad guardada. La fecha se valida nuevamente al inscribirte.';
     }
